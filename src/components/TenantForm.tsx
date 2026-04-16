@@ -19,6 +19,7 @@ export function TenantForm({
   initial,
   submitLabel,
   cancelHref,
+  includePassword = false,
 }: {
   action: (prev: TenantFormState, formData: FormData) => Promise<TenantFormState>;
   initial?: {
@@ -30,12 +31,14 @@ export function TenantForm({
   };
   submitLabel: string;
   cancelHref: string;
+  includePassword?: boolean;
 }) {
   const [state, formAction] = useFormState<TenantFormState, FormData>(action, {});
   const values = state.values ?? {
     fullName: initial?.fullName ?? "",
     phone: initial?.phone ?? "",
     email: initial?.email ?? "",
+    password: "",
     notes: initial?.notes ?? "",
     turbotenantReference: initial?.turbotenantReference ?? "",
   };
@@ -54,6 +57,21 @@ export function TenantForm({
           <Input name="email" type="email" defaultValue={values.email ?? ""} />
         </Field>
       </div>
+      {includePassword && (
+        <Field
+          label="Portal password"
+          hint="Sets the tenant's password for the tenant portal. Min 8 characters. Leave blank to skip — you can set it later."
+          error={errors.password}
+        >
+          <Input
+            name="password"
+            type="text"
+            autoComplete="off"
+            defaultValue={values.password ?? ""}
+            placeholder="Enter a starter password"
+          />
+        </Field>
+      )}
       <Field
         label="TurboTenant reference"
         hint="Link or external ID. Payments are still tracked in TurboTenant."

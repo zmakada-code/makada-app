@@ -8,6 +8,11 @@ import {
   optionalString,
   type FieldErrors,
 } from "@/lib/validation";
+import {
+  provisionTenantAuth,
+  setTenantAuthLock,
+  deleteTenantAuth,
+} from "@/lib/tenant-auth";
 
 export type TenantFormState = {
   errors?: FieldErrors;
@@ -15,6 +20,7 @@ export type TenantFormState = {
     fullName: string;
     phone: string;
     email: string;
+    password: string;
     notes: string;
     turbotenantReference: string;
   };
@@ -39,9 +45,19 @@ export async function createTenant(
   const fullName = requireString(errors, "fullName", formData.get("fullName"), { max: 160 });
   const phone = optionalString(formData.get("phone"), 40);
   const email = optionalString(formData.get("email"), 160);
+  const password = optionalString(formData.get("password"));
   const notes = optionalString(formData.get("notes"));
   const turbotenantReference = optionalString(formData.get("turbotenantReference"), 500);
   validateEmail(errors, email);
+
+  if (password) {
+    if (!email) {
+      errors.password = "An email is required to set a password.";
+    }
+    if (password.length < 8) {
+      errors.password = "Password must be at least 8 characters.";
+    }
+  }
 
   if (Object.keys(errors).length) {
     return {
@@ -50,6 +66,7 @@ export async function createTenant(
         fullName,
         phone: phone ?? "",
         email: email ?? "",
+        password: password ?? "",
         notes: notes ?? "",
         turbotenantReference: turbotenantReference ?? "",
       },
@@ -60,21 +77,26 @@ export async function createTenant(
     data: { fullName, phone, email, notes, turbotenantReference },
   });
 
-  // Auto-invite tenant to the portal if they have an email
-  if (email) {
+  if (email && password) {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-      await fetch(`${baseUrl}/api/tenant-invite`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-intake-secret": process.env.INQUIRY_INTAKE_SECRET ?? "",
+      const { userId } = await provisionTenantAuth(email, password);
+      await prisma.tenant.update({
+        where: { id: created.id },
+        data: {
+          portalPassword: password,
+          authUserId: userId,
+          authLocked: false,
         },
-        body: JSON.stringify({ email }),
       });
     } catch (err) {
-      // Don't block tenant creation if invite fails — log and continue.
-      console.error("[createTenant] Portal invite failed:", err);
+      console.error("[createTenant] Auth provisioning error:", err);
+      redirect(
+        flash(
+          `/tenants/${created.id}`,
+          "Tenant created, but portal account failed to provision. Set a password from the tenant page.",
+          "error"
+        )
+      );
     }
   }
 
@@ -103,6 +125,7 @@ export async function updateTenant(
         fullName,
         phone: phone ?? "",
         email: email ?? "",
+        password: "",
         notes: notes ?? "",
         turbotenantReference: turbotenantReference ?? "",
       },
@@ -119,11 +142,89 @@ export async function updateTenant(
   redirect(flash(`/tenants/${id}`, "Tenant updated."));
 }
 
+/**
+ * Set or reset a tenant's portal password.
+ * Persists the plaintext to Tenant.portalPassword so the admin can see it.
+ */
+export async function setTenantPassword(
+  _prev: { error?: string; success?: string },
+  formData: FormData
+): Promise<{ error?: string; success?: string }> {
+  const id = formData.get("id")?.toString();
+  const password = formData.get("password")?.toString() ?? "";
+
+  if (!id) return { error: "Missing tenant id." };
+  if (password.length < 8) {
+    return { error: "Password must be at least 8 characters." };
+  }
+
+  const tenant = await prisma.tenant.findUnique({ where: { id } });
+  if (!tenant) return { error: "Tenant not found." };
+  if (!tenant.email) {
+    return { error: "This tenant has no email on file. Add one first." };
+  }
+
+  try {
+    const { userId } = await provisionTenantAuth(tenant.email, password);
+    await prisma.tenant.update({
+      where: { id },
+      data: {
+        portalPassword: password,
+        authUserId: userId,
+        authLocked: false,
+      },
+    });
+    revalidatePath(`/tenants/${id}`);
+    return { success: "Password updated." };
+  } catch (err) {
+    console.error("[setTenantPassword] error:", err);
+    return {
+      error: err instanceof Error ? err.message : "Failed to set password.",
+    };
+  }
+}
+
+/**
+ * Lock or unlock the tenant's portal account.
+ * Pass formData with { id, locked: "true" | "false" }.
+ */
+export async function setTenantLocked(
+  _prev: { error?: string; success?: string },
+  formData: FormData
+): Promise<{ error?: string; success?: string }> {
+  const id = formData.get("id")?.toString();
+  const locked = formData.get("locked")?.toString() === "true";
+  if (!id) return { error: "Missing tenant id." };
+
+  const tenant = await prisma.tenant.findUnique({ where: { id } });
+  if (!tenant) return { error: "Tenant not found." };
+  if (!tenant.authUserId) {
+    return { error: "No portal account found. Set a password first." };
+  }
+
+  try {
+    await setTenantAuthLock(tenant.authUserId, locked);
+    await prisma.tenant.update({
+      where: { id },
+      data: { authLocked: locked },
+    });
+    revalidatePath(`/tenants/${id}`);
+    return { success: locked ? "Account locked." : "Account unlocked." };
+  } catch (err) {
+    console.error("[setTenantLocked] error:", err);
+    return {
+      error: err instanceof Error ? err.message : "Failed to update account state.",
+    };
+  }
+}
+
 export async function deleteTenant(formData: FormData) {
   const id = formData.get("id")?.toString();
   if (!id) return;
 
-  // Don't let a tenant with an active lease be deleted outright.
+  const tenant = await prisma.tenant.findUnique({ where: { id } });
+  if (!tenant) return;
+
   const activeLeases = await prisma.lease.count({
     where: { tenantId: id, status: "ACTIVE" },
   });
@@ -135,6 +236,13 @@ export async function deleteTenant(formData: FormData) {
         "error"
       )
     );
+  }
+
+  // Best-effort cleanup of the Supabase auth user
+  try {
+    await deleteTenantAuth({ userId: tenant.authUserId, email: tenant.email });
+  } catch (err) {
+    console.error("[deleteTenant] Auth cleanup error:", err);
   }
 
   await prisma.tenant.delete({ where: { id } });

@@ -119,6 +119,12 @@ model Tenant {
   email                 String?
   notes                 String?
   turbotenantReference  String?  // link or external ID — payments live in TurboTenant
+
+  // Tenant-portal auth, managed entirely from the Makada admin app
+  portalPassword        String?  // plaintext, admin-set; internal family-only tool
+  authUserId            String?  // cached Supabase auth user id
+  authLocked            Boolean  @default(false)
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 

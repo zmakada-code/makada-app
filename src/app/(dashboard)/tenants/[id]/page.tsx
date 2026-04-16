@@ -9,6 +9,7 @@ import { Flash } from "@/components/Flash";
 import { LeaseStatusBadge } from "@/components/LeaseStatusBadge";
 import { DocumentsSection } from "@/components/DocumentsSection";
 import { TicketsSection } from "@/components/TicketsSection";
+import { TenantPasswordCard } from "@/components/TenantPasswordCard";
 import { deleteTenant } from "@/lib/actions/tenants";
 import { formatDate } from "@/lib/dates";
 
@@ -176,6 +177,16 @@ export default async function TenantDetailPage({
           </div>
         </>
       )}
+
+      <div className="mb-6">
+        <TenantPasswordCard
+          tenantId={tenant.id}
+          hasEmail={!!tenant.email}
+          currentPassword={tenant.portalPassword ?? null}
+          locked={tenant.authLocked}
+          hasAuthAccount={!!tenant.authUserId}
+        />
+      </div>
 
       <TicketsSection by={{ tenantId: tenant.id }} />
       <DocumentsSection entityType="TENANT" entityId={tenant.id} />

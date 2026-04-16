@@ -5,11 +5,12 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/tenant-invite
- * Called internally by the createTenant server action after a tenant is created.
- * Sends a magic-link invite to the tenant's email via Supabase auth.
  *
- * Body: { email: string }
- * Auth: x-intake-secret header (same secret as inquiry intake)
+ * Provisions a Supabase auth user for a tenant with a specific password.
+ * If the user already exists, updates their password instead.
+ *
+ * Body: { email: string, password: string }
+ * Auth: x-intake-secret header
  */
 export async function POST(request: Request) {
   const secret = request.headers.get("x-intake-secret");
@@ -19,47 +20,71 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const email = body.email?.trim()?.toLowerCase();
+  const password = body.password;
 
-  if (!email) {
-    return NextResponse.json({ error: "Email is required." }, { status: 400 });
+  if (!email || !password) {
+    return NextResponse.json(
+      { error: "email and password are required." },
+      { status: 400 }
+    );
   }
 
-  const redirectTo = process.env.TENANT_PORTAL_URL
-    ? `${process.env.TENANT_PORTAL_URL}/auth/callback`
-    : undefined;
-
-  if (!redirectTo) {
-    console.error("[tenant-invite] TENANT_PORTAL_URL is not set");
+  if (password.length < 8) {
     return NextResponse.json(
-      { error: "Tenant portal URL not configured." },
-      { status: 500 }
+      { error: "Password must be at least 8 characters." },
+      { status: 400 }
     );
   }
 
   try {
     const supabase = createSupabaseAdminClient();
 
-    // inviteUserByEmail creates the auth user and sends a magic link.
-    // If the user already exists in auth, it re-sends the invite.
-    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-      redirectTo,
-      data: { role: "tenant" },
+    // Check if user already exists
+    const { data: existing } = await supabase.auth.admin.listUsers();
+    const existingUser = existing?.users.find(
+      (u) => u.email?.toLowerCase() === email
+    );
+
+    if (existingUser) {
+      // Update existing user's password
+      const { error } = await supabase.auth.admin.updateUserById(
+        existingUser.id,
+        { password, email_confirm: true }
+      );
+
+      if (error) {
+        console.error("[tenant-invite] update error:", error.message);
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+
+      return NextResponse.json({
+        ok: true,
+        userId: existingUser.id,
+        action: "updated",
+      });
+    }
+
+    // Create new user with password, auto-confirm email
+    const { data, error } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { role: "tenant" },
     });
 
     if (error) {
-      console.error("[tenant-invite] Supabase error:", error.message);
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
+      console.error("[tenant-invite] create error:", error.message);
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    console.log(`[tenant-invite] Invited ${email}, auth user id: ${data.user.id}`);
-    return NextResponse.json({ ok: true, userId: data.user.id }, { status: 201 });
+    return NextResponse.json(
+      { ok: true, userId: data.user.id, action: "created" },
+      { status: 201 }
+    );
   } catch (err) {
     console.error("[tenant-invite] Unexpected error:", err);
     return NextResponse.json(
-      { error: "Failed to send invite." },
+      { error: "Failed to provision tenant account." },
       { status: 500 }
     );
   }

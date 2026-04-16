@@ -36,6 +36,7 @@ export default function NewTenantPage({
         cancelHref={
           fromInquiry ? `/inquiries/${searchParams.fromInquiry}` : "/tenants"
         }
+        includePassword
       />
     </div>
   );
