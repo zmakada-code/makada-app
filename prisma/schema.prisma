@@ -1,0 +1,213 @@
+// Makada Properties — internal operating schema
+// Phase 1: schema only. No heavy business logic yet.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------- Enums ----------
+
+enum OccupancyStatus {
+  OCCUPIED
+  VACANT
+  TURNOVER
+}
+
+enum LeaseStatus {
+  ACTIVE
+  UPCOMING
+  ENDED
+  TERMINATED
+}
+
+enum PaymentState {
+  PAID
+  BEHIND
+  UNKNOWN
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum DocumentType {
+  LEASE
+  NOTICE
+  RECEIPT
+  RULES
+  OTHER
+}
+
+enum LinkedEntityType {
+  PROPERTY
+  UNIT
+  TENANT
+  LEASE
+}
+
+enum InquirySource {
+  WEBSITE
+  WALK_IN
+  REFERRAL
+  OTHER
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  TOURED
+  REJECTED
+  CONVERTED
+}
+
+// ---------- Core records ----------
+
+model Property {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  units Unit[]
+}
+
+model Unit {
+  id               String          @id @default(cuid())
+  propertyId       String
+  label            String
+  bedrooms         Int             @default(0)
+  bathrooms        Float           @default(0)
+  rentAmount       Decimal         @default(0) @db.Decimal(10, 2)
+  depositAmount    Decimal         @default(0) @db.Decimal(10, 2)
+  occupancyStatus  OccupancyStatus @default(VACANT)
+  notes            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  isPublished       Boolean @default(false)
+  publicDescription String?
+
+  property     Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  leases       Lease[]
+  tickets      MaintenanceTicket[]
+  inquiries    Inquiry[]
+
+  @@index([propertyId])
+}
+
+model Tenant {
+  id                    String   @id @default(cuid())
+  fullName              String
+  phone                 String?
+  email                 String?
+  notes                 String?
+  turbotenantReference  String?  // link or external ID — payments live in TurboTenant
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  leases  Lease[]
+  tickets MaintenanceTicket[]
+}
+
+model Lease {
+  id           String      @id @default(cuid())
+  unitId       String
+  tenantId     String
+  startDate    DateTime
+  endDate      DateTime
+  monthlyRent  Decimal     @db.Decimal(10, 2)
+  status       LeaseStatus @default(ACTIVE)
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  unit            Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  paymentStatuses PaymentStatus[]
+
+  @@index([unitId])
+  @@index([tenantId])
+  @@index([status])
+}
+
+model PaymentStatus {
+  id        String       @id @default(cuid())
+  leaseId   String
+  period    String       // e.g. "2026-04"
+  status    PaymentState @default(UNKNOWN)
+  note      String?
+  updatedAt DateTime     @updatedAt
+  createdAt DateTime     @default(now())
+
+  lease Lease @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+
+  @@unique([leaseId, period])
+  @@index([leaseId])
+}
+
+model MaintenanceTicket {
+  id          String         @id @default(cuid())
+  unitId      String
+  tenantId    String?
+  title       String
+  description String?
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+  resolvedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  unit   Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([unitId])
+  @@index([status])
+}
+
+model Document {
+  id                String           @id @default(cuid())
+  filename          String
+  fileUrl           String           // optional cached URL; we sign at view time
+  storagePath       String           // object path inside the Supabase bucket
+  type              DocumentType     @default(OTHER)
+  linkedEntityType  LinkedEntityType
+  linkedEntityId    String
+  uploadedAt        DateTime         @default(now())
+
+  @@index([linkedEntityType, linkedEntityId])
+}
+
+model Inquiry {
+  id            String         @id @default(cuid())
+  unitId        String?
+  prospectName  String
+  phone         String?
+  email         String?
+  message       String?
+  source        InquirySource  @default(WEBSITE)
+  status        InquiryStatus  @default(NEW)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  unit Unit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  @@index([unitId])
+  @@index([status])
+}
