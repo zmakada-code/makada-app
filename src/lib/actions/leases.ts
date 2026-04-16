@@ -201,7 +201,7 @@ export async function updateLease(
 
       if (status === "ACTIVE") {
         await tx.unit.update({ where: { id: unitId }, data: { occupancyStatus: "OCCUPIED" } });
-      } else if (prior.status === "ACTIVE" && status !== "ACTIVE") {
+      } else if (prior.status === "ACTIVE" && } else if (prior.status === "ACTIVE") {status !== "ACTIVE") {
         // Lease left ACTIVE on the same unit — flip it to TURNOVER if no other active lease exists.
         const stillActive = await tx.lease.count({
           where: { unitId, status: "ACTIVE" },
