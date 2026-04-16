@@ -19,11 +19,6 @@ export async function GET() {
       ],
     });
 
-    console.log(
-      `[listings] DATABASE_URL host: ${(process.env.DATABASE_URL ?? "").split("@")[1]?.split("/")[0] ?? "NOT SET"}`,
-      `| found ${units.length} published vacant units`
-    );
-
     const data = units.map((unit) => ({
       id: unit.id,
       propertyName: unit.property.name,
