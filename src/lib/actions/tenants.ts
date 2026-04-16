@@ -60,6 +60,24 @@ export async function createTenant(
     data: { fullName, phone, email, notes, turbotenantReference },
   });
 
+  // Auto-invite tenant to the portal if they have an email
+  if (email) {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+      await fetch(`${baseUrl}/api/tenant-invite`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-intake-secret": process.env.INQUIRY_INTAKE_SECRET ?? "",
+        },
+        body: JSON.stringify({ email }),
+      });
+    } catch (err) {
+      // Don't block tenant creation if invite fails — log and continue.
+      console.error("[createTenant] Portal invite failed:", err);
+    }
+  }
+
   revalidatePath("/tenants");
   revalidatePath("/dashboard");
   redirect(flash(`/tenants/${created.id}`, "Tenant created."));
