@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, FileText, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 type AnalysisResult = {
@@ -20,12 +20,53 @@ type AnalysisResult = {
   message: string;
 };
 
+const MAX_SIZE = 4 * 1024 * 1024; // 4MB
+
+/** Compress an image on the client using canvas */
+async function compressImage(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      // Scale down to max 1600px on longest side
+      const maxDim = 1600;
+      let w = img.width;
+      let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(file); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return; }
+          resolve(new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        0.85
+      );
+    };
+    img.onerror = () => reject(new Error("Could not read image"));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 export function AIUploadForm() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [dragOver, setDragOver] = useState(false);
+
+  function acceptFile(f: File) {
+    setFile(f);
+    setResult(null);
+    setError("");
+  }
 
   async function handleUpload() {
     if (!file) return;
@@ -34,15 +75,38 @@ export function AIUploadForm() {
     setResult(null);
 
     try {
+      let uploadFile = file;
+
+      // Compress large images client-side
+      if (file.type.startsWith("image/") && file.size > MAX_SIZE) {
+        try {
+          uploadFile = await compressImage(file);
+        } catch {
+          // If compression fails, try uploading the original
+        }
+      }
+
+      // Final size check
+      if (uploadFile.size > MAX_SIZE) {
+        throw new Error("File is too large (max 4 MB). Please use a smaller file or compress the image first.");
+      }
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", uploadFile);
 
       const res = await fetch("/api/documents/ai-upload", {
         method: "POST",
         body: formData,
       });
 
-      const data = await res.json();
+      let data;
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(text || `Server error (${res.status})`);
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Failed to process document");
@@ -50,20 +114,22 @@ export function AIUploadForm() {
 
       setResult(data);
     } catch (err) {
-      setError((err as Error).message);
+      setError((err as Error).message || "Something went wrong. Please try again.");
     } finally {
       setUploading(false);
     }
   }
 
+  const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/gif"];
+
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
     const dropped = e.dataTransfer.files[0];
-    const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/gif"];
     if (dropped && allowed.includes(dropped.type)) {
-      setFile(dropped);
-      setResult(null);
+      acceptFile(dropped);
+    } else if (dropped) {
+      setError("Please upload a PDF or image file (JPG, PNG, WebP, GIF).");
     }
   }
 
@@ -77,7 +143,7 @@ export function AIUploadForm() {
         className={`card border-2 border-dashed p-10 text-center transition-colors cursor-pointer ${
           dragOver ? "border-indigo-400 bg-indigo-50/50" : "border-slate-200 hover:border-slate-300"
         }`}
-        onClick={() => document.getElementById("file-input")?.click()}
+        onClick={() => document.getElementById("ai-file-input")?.click()}
       >
         <Upload className="h-10 w-10 text-slate-300 mx-auto mb-3" />
         {file ? (
@@ -92,13 +158,13 @@ export function AIUploadForm() {
           </div>
         )}
         <input
-          id="file-input"
+          id="ai-file-input"
           type="file"
           accept=".pdf,.jpg,.jpeg,.png,.webp,.gif"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) { setFile(f); setResult(null); }
+            if (f) acceptFile(f);
           }}
         />
       </div>
@@ -112,7 +178,14 @@ export function AIUploadForm() {
 
       {file && !result && (
         <Button onClick={handleUpload} disabled={uploading} className="w-full">
-          {uploading ? "Analyzing with AI…" : "Upload & Categorize"}
+          {uploading ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Analyzing with AI…
+            </span>
+          ) : (
+            "Upload & Categorize"
+          )}
         </Button>
       )}
 

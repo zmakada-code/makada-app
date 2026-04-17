@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// Allow larger uploads (up to 10MB)
+export const maxDuration = 60;
+
 /**
  * POST /api/documents/ai-upload
  * Accepts a PDF or image upload, uses Claude to analyze it, and auto-categorizes it
