@@ -18,8 +18,8 @@ export function EmptyState({
 }) {
   return (
     <div className="card p-10 flex flex-col items-center text-center">
-      <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-        <Icon className="h-5 w-5 text-slate-500" />
+      <div className="h-12 w-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4">
+        <Icon className="h-6 w-6 text-indigo-400" />
       </div>
       <div className="text-base font-medium">{title}</div>
       {description && (
@@ -28,7 +28,7 @@ export function EmptyState({
       {actionHref && actionLabel && (
         <Link
           href={actionHref}
-          className="mt-5 inline-flex items-center justify-center rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          className="mt-5 inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 shadow-sm transition-colors"
         >
           {actionLabel}
         </Link>

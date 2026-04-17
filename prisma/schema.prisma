@@ -32,6 +32,13 @@ enum PaymentState {
   UNKNOWN
 }
 
+enum PaymentMethod {
+  ONLINE    // Stripe
+  CHECK
+  CASH
+  OTHER
+}
+
 enum TicketStatus {
   OPEN
   IN_PROGRESS
@@ -154,13 +161,17 @@ model Lease {
 }
 
 model PaymentStatus {
-  id        String       @id @default(cuid())
-  leaseId   String
-  period    String       // e.g. "2026-04"
-  status    PaymentState @default(UNKNOWN)
-  note      String?
-  updatedAt DateTime     @updatedAt
-  createdAt DateTime     @default(now())
+  id              String        @id @default(cuid())
+  leaseId         String
+  period          String        // e.g. "2026-04"
+  status          PaymentState  @default(UNKNOWN)
+  method          PaymentMethod?
+  amountPaid      Decimal?      @db.Decimal(10, 2)
+  stripeSessionId String?       // Stripe checkout session ID
+  paidAt          DateTime?
+  note            String?
+  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime      @default(now())
 
   lease Lease @relation(fields: [leaseId], references: [id], onDelete: Cascade)
 

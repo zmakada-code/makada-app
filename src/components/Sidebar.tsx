@@ -12,51 +12,97 @@ import {
   FolderOpen,
   Inbox,
   Settings,
+  CreditCard,
+  Home,
 } from "lucide-react";
 import clsx from "clsx";
 
-const NAV = [
+const MAIN_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/properties", label: "Properties", icon: Building2 },
   { href: "/units", label: "Units", icon: DoorOpen },
+  { href: "/payments", label: "Payments", icon: CreditCard },
+  { href: "/maintenance", label: "Maintenance", icon: Wrench },
+];
+
+const PEOPLE_NAV = [
   { href: "/tenants", label: "Tenants", icon: Users },
   { href: "/leases", label: "Leases", icon: FileText },
-  { href: "/maintenance", label: "Maintenance", icon: Wrench },
-  { href: "/documents", label: "Documents", icon: FolderOpen },
   { href: "/inquiries", label: "Inquiries", icon: Inbox },
+];
+
+const MANAGE_NAV = [
+  { href: "/documents", label: "Documents", icon: FolderOpen },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar() {
-  const pathname = usePathname();
+function NavSection({
+  label,
+  items,
+  pathname,
+}: {
+  label?: string;
+  items: { href: string; label: string; icon: React.ElementType }[];
+  pathname: string;
+}) {
   return (
-    <aside className="w-60 shrink-0 border-r border-slate-200 bg-white h-screen sticky top-0 flex flex-col">
-      <div className="px-5 py-5 border-b border-slate-200">
-        <div className="text-[11px] uppercase tracking-wider text-slate-400">Internal</div>
-        <div className="text-base font-semibold">Makada Properties</div>
-      </div>
-      <nav className="flex-1 px-2 py-3 space-y-0.5">
-        {NAV.map(({ href, label, icon: Icon }) => {
+    <div className="mb-2">
+      {label && (
+        <div className="px-3 pt-4 pb-1.5 text-[10px] uppercase tracking-widest text-indigo-300/50 font-semibold">
+          {label}
+        </div>
+      )}
+      <div className="space-y-0.5">
+        {items.map(({ href, label: navLabel, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
               key={href}
               href={href}
               className={clsx(
-                "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm",
+                "flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150",
                 active
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-700 hover:bg-slate-100"
+                  ? "bg-white/15 text-white shadow-sm"
+                  : "text-indigo-100/70 hover:bg-white/10 hover:text-white"
               )}
             >
-              <Icon className="h-4 w-4" />
-              <span>{label}</span>
+              <Icon className={clsx("h-4 w-4", active ? "text-white" : "text-indigo-300/60")} />
+              <span>{navLabel}</span>
             </Link>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+export function Sidebar() {
+  const pathname = usePathname();
+  return (
+    <aside className="w-[220px] shrink-0 bg-gradient-to-b from-[#1e1b4b] to-[#1a1744] h-screen sticky top-0 flex flex-col">
+      {/* Brand */}
+      <div className="px-4 py-5">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-lg bg-indigo-500/30 flex items-center justify-center">
+            <Home className="h-4 w-4 text-indigo-300" />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-white tracking-tight">Makada</div>
+            <div className="text-[10px] text-indigo-300/50 font-medium">Properties</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-2.5 overflow-y-auto">
+        <NavSection items={MAIN_NAV} pathname={pathname} />
+        <NavSection label="Renters" items={PEOPLE_NAV} pathname={pathname} />
+        <NavSection label="Manage" items={MANAGE_NAV} pathname={pathname} />
       </nav>
-      <div className="px-4 py-3 text-xs text-slate-400 border-t border-slate-200">
-        v0.1 · Phase 1
+
+      {/* Footer */}
+      <div className="px-4 py-3 text-[10px] text-indigo-300/30 border-t border-white/5">
+        Makada Properties v0.1
       </div>
     </aside>
   );

@@ -4,12 +4,12 @@ import Link from "next/link";
 type Variant = "primary" | "secondary" | "danger" | "ghost";
 
 const base =
-  "inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium px-3 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium px-3.5 py-2 transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-slate-900 text-white hover:bg-slate-800",
-  secondary: "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-  danger: "border border-red-200 bg-white text-red-700 hover:bg-red-50",
+  primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm",
+  secondary: "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-sm",
+  danger: "border border-red-200 bg-white text-red-600 hover:bg-red-50 hover:border-red-300 shadow-sm",
   ghost: "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
 };
 
