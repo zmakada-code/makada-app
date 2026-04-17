@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import Anthropic from "@anthropic-ai/sdk";
 
 /**
  * POST /api/documents/ai-upload
- * Accepts a PDF upload, uses Claude to analyze it, and auto-categorizes it
+ * Accepts a PDF or image upload, uses Claude to analyze it, and auto-categorizes it
  * to the correct property/unit. Also extracts expense data if applicable.
- *
- * FormData: file (PDF), plus optional overrides: propertyId, unitId
  */
 export async function POST(req: NextRequest) {
   try {
@@ -21,8 +18,13 @@ export async function POST(req: NextRequest) {
     // Read file content
     const buffer = Buffer.from(await file.arrayBuffer());
     const base64 = buffer.toString("base64");
-    const mimeType = file.type || "application/pdf";
+    const mimeType = file.type || "application/octet-stream";
     const isImage = mimeType.startsWith("image/");
+    const isPdf = mimeType === "application/pdf";
+
+    if (!isImage && !isPdf) {
+      return NextResponse.json({ error: "Please upload a PDF or image file (JPG, PNG, WebP, GIF)" }, { status: 400 });
+    }
 
     // Get all properties and units for context
     const properties = await prisma.property.findMany({
@@ -44,30 +46,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 500 });
     }
 
-    const anthropic = new Anthropic({ apiKey });
-
-    // Build the content block based on file type
-    const fileContent: Anthropic.Messages.ContentBlockParam = isImage
-      ? {
-          type: "image",
-          source: { type: "base64", media_type: mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif", data: base64 },
-        }
-      : {
-          type: "document",
-          source: { type: "base64", media_type: "application/pdf", data: base64 },
-        };
-
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: [
-            fileContent,
-            {
-              type: "text",
-              text: `Analyze this document and extract the following information. Return ONLY valid JSON, no other text.
+    const prompt = `Analyze this document and extract the following information. Return ONLY valid JSON, no other text.
 
 Here are the properties in our system:
 ${JSON.stringify(propertyContext, null, 2)}
@@ -85,25 +64,78 @@ Return JSON with these fields:
   "isExpense": true if this is a bill/invoice/expense document,
   "reference": "invoice/check number if present, or null",
   "confidence": "high" | "medium" | "low"
-}`,
-            },
-          ],
+}`;
+
+    // Build the content array for the API call
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const content: any[] = [];
+
+    if (isImage) {
+      content.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: mimeType,
+          data: base64,
         },
-      ],
+      });
+    } else {
+      // PDF — send as document type
+      content.push({
+        type: "document",
+        source: {
+          type: "base64",
+          media_type: "application/pdf",
+          data: base64,
+        },
+      });
+    }
+
+    content.push({ type: "text", text: prompt });
+
+    // Call Anthropic API directly via fetch for maximum compatibility
+    const apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        messages: [
+          {
+            role: "user",
+            content,
+          },
+        ],
+      }),
     });
 
+    if (!apiResponse.ok) {
+      const errBody = await apiResponse.text();
+      console.error("Anthropic API error:", apiResponse.status, errBody);
+      return NextResponse.json(
+        { error: `AI analysis failed (${apiResponse.status}). Please try a smaller file or a different format.` },
+        { status: 500 }
+      );
+    }
+
+    const apiResult = await apiResponse.json();
+
     // Parse Claude's response
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const text =
+      apiResult.content?.[0]?.type === "text" ? apiResult.content[0].text : "";
     let parsed;
     try {
-      // Extract JSON from response (handle markdown code blocks)
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
     } catch {
-      return NextResponse.json({
-        error: "Failed to parse AI response",
-        raw: text,
-      }, { status: 500 });
+      return NextResponse.json(
+        { error: "AI could not analyze this document. Try a clearer image or PDF.", raw: text },
+        { status: 500 }
+      );
     }
 
     // Allow overrides from form
@@ -113,8 +145,18 @@ Return JSON with these fields:
     const finalPropertyId = overridePropertyId || parsed.propertyId;
     const finalUnitId = overrideUnitId || parsed.unitId;
 
-    // Store document in Supabase Storage (or local for now)
-    // For now, we'll store the metadata and file reference
+    // We need at least a property to link to
+    const linkedEntityId = finalUnitId || finalPropertyId;
+    if (!linkedEntityId) {
+      return NextResponse.json(
+        {
+          error: "AI could not match this document to a property. Please try again or file it manually.",
+          analysis: parsed,
+        },
+        { status: 400 }
+      );
+    }
+
     const storagePath = `documents/${Date.now()}-${file.name}`;
 
     // Create document record
@@ -124,8 +166,8 @@ Return JSON with these fields:
         fileUrl: storagePath,
         storagePath,
         type: parsed.documentType || "OTHER",
-        linkedEntityType: finalUnitId ? "UNIT" : finalPropertyId ? "PROPERTY" : "PROPERTY",
-        linkedEntityId: finalUnitId || finalPropertyId || "",
+        linkedEntityType: finalUnitId ? "UNIT" : "PROPERTY",
+        linkedEntityId,
       },
     });
 
@@ -156,6 +198,7 @@ Return JSON with these fields:
     });
   } catch (err) {
     console.error("AI upload error:", err);
-    return NextResponse.json({ error: "Failed to process document" }, { status: 500 });
+    const message = err instanceof Error ? err.message : "Failed to process document";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
