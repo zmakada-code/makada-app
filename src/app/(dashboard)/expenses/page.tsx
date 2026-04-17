@@ -106,6 +106,7 @@ export default async function ExpensesPage({
                 <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Property</th>
                 <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Category</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Amount</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">&nbsp;</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -124,6 +125,14 @@ export default async function ExpensesPage({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right font-semibold text-slate-900">{money(e.amount)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <Link
+                      href={`/expenses/${e.id}/edit`}
+                      className="text-sm text-slate-600 hover:text-slate-900"
+                    >
+                      Edit
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

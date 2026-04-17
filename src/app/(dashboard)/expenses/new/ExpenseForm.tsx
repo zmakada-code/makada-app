@@ -10,6 +10,18 @@ type PropertyOption = {
   units: { id: string; label: string }[];
 };
 
+export type ExpenseInitial = {
+  propertyId: string;
+  unitId: string;
+  category: string;
+  vendor: string;
+  description: string;
+  amount: string;
+  date: string;
+  reference: string;
+  note: string;
+};
+
 const CATEGORIES = [
   { value: "REPAIRS", label: "Repairs" },
   { value: "MAINTENANCE", label: "Maintenance" },
@@ -25,11 +37,20 @@ const CATEGORIES = [
   { value: "OTHER", label: "Other" },
 ];
 
-export function ExpenseForm({ properties }: { properties: PropertyOption[] }) {
+export function ExpenseForm({
+  properties,
+  initial,
+  expenseId,
+}: {
+  properties: PropertyOption[];
+  initial?: ExpenseInitial;
+  expenseId?: string;
+}) {
   const router = useRouter();
+  const isEdit = !!expenseId;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [selectedProperty, setSelectedProperty] = useState("");
+  const [selectedProperty, setSelectedProperty] = useState(initial?.propertyId || "");
 
   const units = properties.find((p) => p.id === selectedProperty)?.units ?? [];
 
@@ -52,18 +73,22 @@ export function ExpenseForm({ properties }: { properties: PropertyOption[] }) {
     };
 
     try {
-      const res = await fetch("/api/expenses", {
-        method: "POST",
+      const url = isEdit ? `/api/expenses/${expenseId}` : "/api/expenses";
+      const method = isEdit ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to add expense");
+        throw new Error(data.error || `Failed to ${isEdit ? "update" : "add"} expense`);
       }
 
-      router.push("/expenses?flash=Expense+added");
+      const flash = isEdit ? "Expense+updated" : "Expense+added";
+      router.push(`/expenses?flash=${flash}`);
       router.refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -104,7 +129,7 @@ export function ExpenseForm({ properties }: { properties: PropertyOption[] }) {
       {units.length > 0 && (
         <div>
           <label htmlFor="unitId" className={labelClass}>Unit (optional)</label>
-          <select id="unitId" name="unitId" className={inputClass}>
+          <select id="unitId" name="unitId" className={inputClass} defaultValue={initial?.unitId || ""}>
             <option value="">Property-wide</option>
             {units.map((u) => (
               <option key={u.id} value={u.id}>{u.label}</option>
@@ -115,7 +140,7 @@ export function ExpenseForm({ properties }: { properties: PropertyOption[] }) {
 
       <div>
         <label htmlFor="category" className={labelClass}>Category</label>
-        <select id="category" name="category" required className={inputClass}>
+        <select id="category" name="category" required className={inputClass} defaultValue={initial?.category || "REPAIRS"}>
           {CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>{c.label}</option>
           ))}
@@ -124,37 +149,37 @@ export function ExpenseForm({ properties }: { properties: PropertyOption[] }) {
 
       <div>
         <label htmlFor="vendor" className={labelClass}>Vendor / Payee</label>
-        <input id="vendor" name="vendor" type="text" placeholder="e.g., John Oliver Construction" className={inputClass} />
+        <input id="vendor" name="vendor" type="text" placeholder="e.g., John Oliver Construction" className={inputClass} defaultValue={initial?.vendor || ""} />
       </div>
 
       <div>
         <label htmlFor="description" className={labelClass}>Description</label>
-        <input id="description" name="description" type="text" required placeholder="e.g., Plumbing repair — bathroom" className={inputClass} />
+        <input id="description" name="description" type="text" required placeholder="e.g., Plumbing repair — bathroom" className={inputClass} defaultValue={initial?.description || ""} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="amount" className={labelClass}>Amount ($)</label>
-          <input id="amount" name="amount" type="number" step="0.01" min="0" required className={inputClass} />
+          <input id="amount" name="amount" type="number" step="0.01" min="0" required className={inputClass} defaultValue={initial?.amount || ""} />
         </div>
         <div>
           <label htmlFor="date" className={labelClass}>Date</label>
-          <input id="date" name="date" type="date" required defaultValue={new Date().toISOString().split("T")[0]} className={inputClass} />
+          <input id="date" name="date" type="date" required defaultValue={initial?.date || new Date().toISOString().split("T")[0]} className={inputClass} />
         </div>
       </div>
 
       <div>
         <label htmlFor="reference" className={labelClass}>Reference # (optional)</label>
-        <input id="reference" name="reference" type="text" placeholder="Check #, Invoice #, etc." className={inputClass} />
+        <input id="reference" name="reference" type="text" placeholder="Check #, Invoice #, etc." className={inputClass} defaultValue={initial?.reference || ""} />
       </div>
 
       <div>
         <label htmlFor="note" className={labelClass}>Note (optional)</label>
-        <textarea id="note" name="note" rows={2} className={inputClass} />
+        <textarea id="note" name="note" rows={2} className={inputClass} defaultValue={initial?.note || ""} />
       </div>
 
       <Button type="submit" disabled={saving} className="w-full">
-        {saving ? "Saving…" : "Add Expense"}
+        {saving ? "Saving…" : isEdit ? "Save Changes" : "Add Expense"}
       </Button>
     </form>
   );

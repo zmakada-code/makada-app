@@ -10,6 +10,7 @@ import { Flash } from "@/components/Flash";
 import { DocumentsSection } from "@/components/DocumentsSection";
 import { TicketsSection } from "@/components/TicketsSection";
 import { InquiriesSection } from "@/components/InquiriesSection";
+import { ExpensesSection } from "@/components/ExpensesSection";
 import { deleteProperty } from "@/lib/actions/properties";
 import { getSignedDocumentUrl, getPublicDocumentUrl } from "@/lib/supabase/admin";
 
@@ -136,8 +137,9 @@ export default async function PropertyDetailPage({
       )}
 
       <TicketsSection by={{ propertyId: property.id }} />
+      <ExpensesSection by={{ propertyId: property.id }} />
       <InquiriesSection by={{ propertyId: property.id }} />
-      <DocumentsSection entityType="PROPERTY" entityId={property.id} />
+      <DocumentsSection entityType="PROPERTY" entityId={property.id} propertyId={property.id} />
     </div>
   );
 }
