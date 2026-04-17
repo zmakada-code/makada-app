@@ -37,8 +37,12 @@ export default async function PropertyDetailPage({
   // Get signed URL for property photo
   let photoUrl: string | null = null;
   if (property.imageUrl) {
-    photoUrl = await getSignedDocumentUrl(property.imageUrl, 60 * 60);
-    if (!photoUrl) photoUrl = getPublicDocumentUrl(property.imageUrl);
+    if (property.imageUrl.startsWith("http") || property.imageUrl.startsWith("/")) {
+      photoUrl = property.imageUrl;
+    } else {
+      photoUrl = await getSignedDocumentUrl(property.imageUrl, 60 * 60);
+      if (!photoUrl) photoUrl = getPublicDocumentUrl(property.imageUrl);
+    }
   }
 
   return (

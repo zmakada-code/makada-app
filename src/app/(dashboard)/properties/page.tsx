@@ -63,6 +63,8 @@ async function PropertyGrid({ properties }: { properties: PropertyWithUnits[] })
       if (!p.imageUrl) return null;
       // If it's already a full URL (external image), use it directly
       if (p.imageUrl.startsWith("http")) return p.imageUrl;
+      // If it's a local static file (e.g. /property-photos/...), use it directly
+      if (p.imageUrl.startsWith("/")) return p.imageUrl;
       // Try signed URL first, fall back to public URL
       const signed = await getSignedDocumentUrl(p.imageUrl, 60 * 60);
       if (signed) return signed;
