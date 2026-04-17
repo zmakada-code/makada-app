@@ -14,6 +14,9 @@ import {
   Settings,
   CreditCard,
   Home,
+  Receipt,
+  BarChart3,
+  Upload,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -22,6 +25,7 @@ const MAIN_NAV = [
   { href: "/properties", label: "Properties", icon: Building2 },
   { href: "/units", label: "Units", icon: DoorOpen },
   { href: "/payments", label: "Payments", icon: CreditCard },
+  { href: "/expenses", label: "Expenses", icon: Receipt },
   { href: "/maintenance", label: "Maintenance", icon: Wrench },
 ];
 
@@ -33,6 +37,8 @@ const PEOPLE_NAV = [
 
 const MANAGE_NAV = [
   { href: "/documents", label: "Documents", icon: FolderOpen },
+  { href: "/documents/upload", label: "AI Upload", icon: Upload },
+  { href: "/statements", label: "Statements", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

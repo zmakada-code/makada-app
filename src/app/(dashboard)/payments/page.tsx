@@ -199,6 +199,7 @@ export default async function PaymentsPage({
                 <th className="text-right px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Rent</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Method</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Status</th>
+                <th className="text-center px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Receipt</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -234,6 +235,19 @@ export default async function PaymentsPage({
                   </td>
                   <td className="px-4 py-3 text-center">
                     <StatusBadge status={p.status} />
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {p.status === "PAID" ? (
+                      <Link
+                        href={`/api/receipts?paymentId=${p.id}`}
+                        target="_blank"
+                        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                      >
+                        PDF
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-slate-300">—</span>
+                    )}
                   </td>
                 </tr>
               ))}

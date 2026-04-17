@@ -56,7 +56,25 @@ enum DocumentType {
   LEASE
   NOTICE
   RECEIPT
+  INVOICE
+  TAX
+  INSURANCE
   RULES
+  OTHER
+}
+
+enum ExpenseCategory {
+  REPAIRS
+  MAINTENANCE
+  MANAGEMENT_FEE
+  PROPERTY_TAX
+  INSURANCE
+  UTILITIES
+  LANDSCAPING
+  CLEANING
+  PEST_CONTROL
+  LEGAL
+  SUPPLIES
   OTHER
 }
 
@@ -92,7 +110,8 @@ model Property {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  units Unit[]
+  units    Unit[]
+  expenses Expense[]
 }
 
 model Unit {
@@ -115,6 +134,7 @@ model Unit {
   leases       Lease[]
   tickets      MaintenanceTicket[]
   inquiries    Inquiry[]
+  expenses     Expense[]
 
   @@index([propertyId])
 }
@@ -227,4 +247,29 @@ model Inquiry {
 
   @@index([unitId])
   @@index([status])
+}
+
+// ---------- Expenses ----------
+
+model Expense {
+  id            String          @id @default(cuid())
+  propertyId    String
+  unitId        String?         // optional — some expenses are property-wide
+  category      ExpenseCategory @default(OTHER)
+  vendor        String?         // payee name
+  description   String
+  amount        Decimal         @db.Decimal(10, 2)
+  date          DateTime        // when the expense occurred
+  reference     String?         // check number, invoice number, etc.
+  documentId    String?         // link to uploaded document
+  note          String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unit     Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId])
+  @@index([unitId])
+  @@index([date])
 }
