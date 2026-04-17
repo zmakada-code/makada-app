@@ -21,12 +21,11 @@ async function main() {
   `);
 
   if (rows.length > 0) {
-    console.log("Column imageUrl already exists on Property. Nothing to do.");
-    return;
+    console.log("Column imageUrl already exists on Property.");
+  } else {
+    await client.query(`ALTER TABLE "Property" ADD COLUMN "imageUrl" TEXT`);
+    console.log("✅ Added imageUrl column to Property table.");
   }
-
-  await client.query(`ALTER TABLE "Property" ADD COLUMN "imageUrl" TEXT`);
-  console.log("✅ Added imageUrl column to Property table.");
 
   // Also add leaseType to Lease table if it doesn't exist
   const { rows: leaseTypeCols } = await client.query(`
