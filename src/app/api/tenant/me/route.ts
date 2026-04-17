@@ -60,6 +60,34 @@ export async function GET(request: Request) {
     orderBy: { createdAt: "desc" },
   });
 
+  // Get documents linked to the tenant's unit(s) or tenant directly
+  const unitIds = leases.map((l) => l.unit.id);
+  const documents = await prisma.document.findMany({
+    where: {
+      OR: [
+        { linkedEntityType: "UNIT", linkedEntityId: { in: unitIds } },
+        { linkedEntityType: "TENANT", linkedEntityId: tenant.id },
+        ...leases.map((l) => ({ linkedEntityType: "LEASE" as const, linkedEntityId: l.id })),
+      ],
+    },
+    orderBy: { uploadedAt: "desc" },
+  });
+
+  // Generate signed URLs for documents
+  const { getSignedDocumentUrl } = await import("@/lib/supabase/admin");
+  const docsWithUrls = await Promise.all(
+    documents.map(async (d) => {
+      const signedUrl = await getSignedDocumentUrl(d.storagePath, 60 * 60); // 1 hour
+      return {
+        id: d.id,
+        filename: d.filename,
+        type: d.type,
+        uploadedAt: d.uploadedAt,
+        url: signedUrl,
+      };
+    })
+  );
+
   return NextResponse.json({
     tenant: {
       id: tenant.id,
@@ -107,5 +135,6 @@ export async function GET(request: Request) {
       unitLabel: t.unit.label,
       propertyName: t.unit.property.name,
     })),
+    documents: docsWithUrls,
   });
 }
