@@ -80,8 +80,8 @@ export async function POST(req: NextRequest) {
         propertyName: lease.unit.property.name,
       },
       customer_email: tenant.email || undefined,
-      success_url: `${baseReturnUrl}/dashboard?payment=success`,
-      cancel_url: `${baseReturnUrl}/dashboard?payment=canceled`,
+      success_url: `${baseReturnUrl}/tenant/payments?payment=success`,
+      cancel_url: `${baseReturnUrl}/tenant/payments?payment=canceled`,
     });
 
     return NextResponse.json({ url: session.url, sessionId: session.id });
