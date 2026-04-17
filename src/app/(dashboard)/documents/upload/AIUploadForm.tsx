@@ -60,7 +60,8 @@ export function AIUploadForm() {
     e.preventDefault();
     setDragOver(false);
     const dropped = e.dataTransfer.files[0];
-    if (dropped && dropped.type === "application/pdf") {
+    const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (dropped && allowed.includes(dropped.type)) {
       setFile(dropped);
       setResult(null);
     }
@@ -86,14 +87,14 @@ export function AIUploadForm() {
           </div>
         ) : (
           <div>
-            <p className="text-sm font-medium text-slate-700">Drop a PDF here or click to browse</p>
-            <p className="text-xs text-slate-400 mt-1">Bills, invoices, leases, tax docs, insurance — anything property-related</p>
+            <p className="text-sm font-medium text-slate-700">Drop a file here or click to browse</p>
+            <p className="text-xs text-slate-400 mt-1">PDFs, photos, or scans of bills, invoices, leases, tax docs — anything property-related</p>
           </div>
         )}
         <input
           id="file-input"
           type="file"
-          accept=".pdf"
+          accept=".pdf,.jpg,.jpeg,.png,.webp,.gif"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];

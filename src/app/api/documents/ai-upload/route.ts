@@ -21,6 +21,8 @@ export async function POST(req: NextRequest) {
     // Read file content
     const buffer = Buffer.from(await file.arrayBuffer());
     const base64 = buffer.toString("base64");
+    const mimeType = file.type || "application/pdf";
+    const isImage = mimeType.startsWith("image/");
 
     // Get all properties and units for context
     const properties = await prisma.property.findMany({
@@ -44,6 +46,17 @@ export async function POST(req: NextRequest) {
 
     const anthropic = new Anthropic({ apiKey });
 
+    // Build the content block based on file type
+    const fileContent: Anthropic.Messages.ContentBlockParam = isImage
+      ? {
+          type: "image",
+          source: { type: "base64", media_type: mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif", data: base64 },
+        }
+      : {
+          type: "document",
+          source: { type: "base64", media_type: "application/pdf", data: base64 },
+        };
+
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
@@ -51,10 +64,7 @@ export async function POST(req: NextRequest) {
         {
           role: "user",
           content: [
-            {
-              type: "document",
-              source: { type: "base64", media_type: "application/pdf", data: base64 },
-            },
+            fileContent,
             {
               type: "text",
               text: `Analyze this document and extract the following information. Return ONLY valid JSON, no other text.
