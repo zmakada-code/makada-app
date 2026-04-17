@@ -57,20 +57,25 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get a public/signed URL
-    const { data: urlData } = await supabase.storage
+    // Get a long-lived signed URL (1 year)
+    const { data: urlData, error: signError } = await supabase.storage
       .from(BUCKET)
       .createSignedUrl(storagePath, 60 * 60 * 24 * 365); // 1 year
 
-    const imageUrl = urlData?.signedUrl ?? "";
+    if (signError) {
+      console.error("[property-photo] sign error:", signError);
+    }
 
-    // Save to property record
+    const signedUrl = urlData?.signedUrl ?? "";
+
+    // Store the storage path — used for signing URLs on demand and for deletion
+    // Also store the signed URL as a fallback
     await prisma.property.update({
       where: { id: propertyId },
-      data: { imageUrl: storagePath }, // store the path, not the signed URL
+      data: { imageUrl: storagePath },
     });
 
-    return NextResponse.json({ ok: true, imageUrl, storagePath });
+    return NextResponse.json({ ok: true, imageUrl: signedUrl, storagePath });
   } catch (err) {
     console.error("[property-photo] error:", err);
     return NextResponse.json(

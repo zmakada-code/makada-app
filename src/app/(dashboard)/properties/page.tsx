@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { ButtonLink } from "@/components/ui/Button";
 import { Flash } from "@/components/Flash";
-import { getSignedDocumentUrl } from "@/lib/supabase/admin";
+import { getSignedDocumentUrl, getPublicDocumentUrl } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +60,9 @@ async function PropertyGrid({ properties }: { properties: PropertyWithUnits[] })
   const photoUrls = await Promise.all(
     properties.map(async (p) => {
       if (!p.imageUrl) return null;
-      return getSignedDocumentUrl(p.imageUrl, 60 * 60);
+      // Try signed URL first, fall back to public URL
+      const signed = await getSignedDocumentUrl(p.imageUrl, 60 * 60);
+      return signed || getPublicDocumentUrl(p.imageUrl);
     })
   );
 

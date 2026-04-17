@@ -25,9 +25,9 @@ type LeaseInput = {
 
 const FIELD_LABELS: Record<keyof LeaseInput, string> = {
   TENANT_1_NAME: "Tenant 1 Full Name",
-  TENANT_2_NAME: "Tenant 2 Full Name (optional)",
-  PROPERTY_ADDRESS: "Property Address",
-  UNIT_NUMBER: "Unit Number / Label",
+  TENANT_2_NAME: "Tenant 2 Full Name (leave blank for single tenant)",
+  PROPERTY_ADDRESS: "Property Street Address (e.g. 500 N San Mateo Drive, San Mateo, CA 94401)",
+  UNIT_NUMBER: "Apartment / Unit Number (inserted into address)",
   BEDROOM_COUNT: "Bedrooms",
   BATHROOM_COUNT: "Bathrooms",
   RENT_AMOUNT: "Monthly Rent",

@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { PropertyForm } from "@/components/PropertyForm";
 import { PropertyPhotoUpload } from "@/components/PropertyPhotoUpload";
 import { updateProperty, type PropertyFormState } from "@/lib/actions/properties";
-import { getSignedDocumentUrl } from "@/lib/supabase/admin";
+import { getSignedDocumentUrl, getPublicDocumentUrl } from "@/lib/supabase/admin";
 
 export default async function EditPropertyPage({
   params,
@@ -18,6 +18,7 @@ export default async function EditPropertyPage({
   let photoUrl: string | null = null;
   if (property.imageUrl) {
     photoUrl = await getSignedDocumentUrl(property.imageUrl, 60 * 60);
+    if (!photoUrl) photoUrl = getPublicDocumentUrl(property.imageUrl);
   }
 
   async function action(prev: PropertyFormState, formData: FormData) {

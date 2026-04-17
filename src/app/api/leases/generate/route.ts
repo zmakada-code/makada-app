@@ -142,9 +142,9 @@ async function buildInputFromLease(leaseId: string): Promise<LeaseInput> {
 
   return {
     TENANT_1_NAME: lease.tenant.fullName,
-    TENANT_2_NAME: "", // second tenant — user can fill in
+    TENANT_2_NAME: "", // second tenant — user can fill in via the form
     PROPERTY_ADDRESS: lease.unit.property.address,
-    UNIT_NUMBER: lease.unit.label,
+    UNIT_NUMBER: lease.unit.label, // used for address formatting and filename
     BEDROOM_COUNT: String(lease.unit.bedrooms),
     BATHROOM_COUNT: String(lease.unit.bathrooms),
     RENT_AMOUNT: `$${Number(lease.monthlyRent).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,

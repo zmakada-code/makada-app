@@ -11,7 +11,7 @@ import { DocumentsSection } from "@/components/DocumentsSection";
 import { TicketsSection } from "@/components/TicketsSection";
 import { InquiriesSection } from "@/components/InquiriesSection";
 import { deleteProperty } from "@/lib/actions/properties";
-import { getSignedDocumentUrl } from "@/lib/supabase/admin";
+import { getSignedDocumentUrl, getPublicDocumentUrl } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,8 @@ export default async function PropertyDetailPage({
   // Get signed URL for property photo
   let photoUrl: string | null = null;
   if (property.imageUrl) {
-    photoUrl = await getSignedDocumentUrl(property.imageUrl, 60 * 60); // 1 hour
+    photoUrl = await getSignedDocumentUrl(property.imageUrl, 60 * 60);
+    if (!photoUrl) photoUrl = getPublicDocumentUrl(property.imageUrl);
   }
 
   return (
