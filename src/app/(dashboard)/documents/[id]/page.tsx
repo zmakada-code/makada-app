@@ -16,6 +16,9 @@ const typeLabels: Record<string, string> = {
   LEASE: "Lease",
   NOTICE: "Notice",
   RECEIPT: "Receipt",
+  INVOICE: "Invoice",
+  TAX: "Tax",
+  INSURANCE: "Insurance",
   RULES: "House rules",
   OTHER: "Other",
 };

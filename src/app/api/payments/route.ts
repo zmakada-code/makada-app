@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createReceiptDocument } from "@/lib/create-receipt-document";
 
 /**
  * POST /api/payments
  * Log a manual payment (check, cash, etc.) from the admin app.
+ * Auto-generates a receipt document in Supabase Storage.
  * Body: { leaseId, period, method, amountPaid?, note? }
  */
 export async function POST(req: NextRequest) {
@@ -44,6 +46,9 @@ export async function POST(req: NextRequest) {
         note: note ?? null,
       },
     });
+
+    // Auto-generate receipt document
+    await createReceiptDocument(payment.id);
 
     return NextResponse.json({ payment });
   } catch (err) {

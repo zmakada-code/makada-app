@@ -11,7 +11,7 @@ import {
   type FieldErrors,
 } from "@/lib/validation";
 
-const DOC_TYPES: DocumentType[] = ["LEASE", "NOTICE", "RECEIPT", "RULES", "OTHER"];
+const DOC_TYPES: DocumentType[] = ["LEASE", "NOTICE", "RECEIPT", "INVOICE", "TAX", "INSURANCE", "RULES", "OTHER"];
 const ENTITY_TYPES: LinkedEntityType[] = ["PROPERTY", "UNIT", "TENANT", "LEASE"];
 const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB

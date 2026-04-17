@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,19 +13,10 @@ export type SearchHit = {
 };
 
 /**
- * Global search. Authenticated (family allowlist via Supabase session).
- * Returns up to 5 hits per entity type across tenants, properties, units,
- * and inquiries.
+ * Global search across tenants, properties, units, and inquiries.
+ * Auth is handled by the middleware — no need to re-check here.
  */
 export async function GET(req: Request) {
-  const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
   if (q.length < 2) {

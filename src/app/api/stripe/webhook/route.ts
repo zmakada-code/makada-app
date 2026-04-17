@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
+import { createReceiptDocument } from "@/lib/create-receipt-document";
 import Stripe from "stripe";
 
 /**
  * POST /api/stripe/webhook
  * Stripe webhook endpoint — handles checkout.session.completed events.
- * When a tenant completes a Stripe checkout, this marks their payment as PAID.
+ * When a tenant completes a Stripe checkout, this marks their payment as PAID
+ * and auto-generates a receipt document.
  */
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -30,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     if (leaseId && period) {
       try {
-        await prisma.paymentStatus.upsert({
+        const payment = await prisma.paymentStatus.upsert({
           where: { leaseId_period: { leaseId, period } },
           update: {
             status: "PAID",
@@ -52,6 +54,9 @@ export async function POST(req: NextRequest) {
           },
         });
         console.log(`✅ Payment recorded: lease ${leaseId}, period ${period}`);
+
+        // Auto-generate receipt document
+        await createReceiptDocument(payment.id);
       } catch (err) {
         console.error("Failed to update payment status:", err);
       }
@@ -61,5 +66,4 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
-// Stripe webhooks need the raw body, so disable body parsing
 export const runtime = "nodejs";
