@@ -4,28 +4,53 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 /**
  * GET /api/receipts?paymentId=xxx
+ * OR  /api/receipts?leaseId=xxx&period=2026-04
  * Generates a PDF receipt for a payment.
  */
 export async function GET(req: NextRequest) {
   const paymentId = req.nextUrl.searchParams.get("paymentId");
-  if (!paymentId) {
-    return NextResponse.json({ error: "paymentId is required" }, { status: 400 });
-  }
+  const leaseId = req.nextUrl.searchParams.get("leaseId");
+  const period = req.nextUrl.searchParams.get("period");
 
-  const payment = await prisma.paymentStatus.findUnique({
-    where: { id: paymentId },
-    include: {
-      lease: {
-        include: {
-          tenant: true,
-          unit: { include: { property: true } },
+  let payment;
+
+  if (paymentId) {
+    payment = await prisma.paymentStatus.findUnique({
+      where: { id: paymentId },
+      include: {
+        lease: {
+          include: {
+            tenant: true,
+            unit: { include: { property: true } },
+          },
         },
       },
-    },
-  });
+    });
+  } else if (leaseId && period) {
+    payment = await prisma.paymentStatus.findUnique({
+      where: { leaseId_period: { leaseId, period } },
+      include: {
+        lease: {
+          include: {
+            tenant: true,
+            unit: { include: { property: true } },
+          },
+        },
+      },
+    });
+  } else {
+    return NextResponse.json(
+      { error: "paymentId or (leaseId + period) is required" },
+      { status: 400 }
+    );
+  }
 
   if (!payment) {
     return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+  }
+
+  if (payment.status !== "PAID") {
+    return NextResponse.json({ error: "Receipt is only available for paid payments" }, { status: 400 });
   }
 
   // Format period
@@ -54,6 +79,8 @@ export async function GET(req: NextRequest) {
   y -= 30;
   page.drawText("Makada Properties", { x: 50, y, font: fontBold, size: 12, color: accent });
   y -= 15;
+  page.drawText("303 Lakeview Way, Emerald Hills, CA 94062", { x: 50, y, font, size: 9, color: muted });
+  y -= 12;
   page.drawText("Receipt generated " + new Date().toLocaleDateString("en-US"), { x: 50, y, font, size: 9, color: muted });
 
   // Line
@@ -102,6 +129,7 @@ export async function GET(req: NextRequest) {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="receipt-${payment.period}-${payment.lease.tenant.fullName.replace(/\s+/g, "-")}.pdf"`,
+      "Access-Control-Allow-Origin": "*",
     },
   });
 }
