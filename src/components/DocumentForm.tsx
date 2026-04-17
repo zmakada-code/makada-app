@@ -26,7 +26,7 @@ export type LinkedOptions = {
 };
 
 type Initial = {
-  type?: "LEASE" | "NOTICE" | "RECEIPT" | "RULES" | "OTHER";
+  type?: "LEASE" | "NOTICE" | "RECEIPT" | "INVOICE" | "TAX" | "INSURANCE" | "RULES" | "OTHER";
   linkedEntityType?: LinkedEntityType;
   linkedEntityId?: string;
 };
@@ -77,6 +77,9 @@ export function DocumentForm({
             <option value="LEASE">Lease</option>
             <option value="NOTICE">Notice</option>
             <option value="RECEIPT">Receipt</option>
+            <option value="INVOICE">Invoice</option>
+            <option value="TAX">Tax</option>
+            <option value="INSURANCE">Insurance</option>
             <option value="RULES">House rules</option>
             <option value="OTHER">Other</option>
           </Select>
