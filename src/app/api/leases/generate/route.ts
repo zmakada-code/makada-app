@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return new Response(buffer, {
+    return new Response(new Uint8Array(buffer), {
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
