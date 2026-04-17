@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { ButtonLink } from "@/components/ui/Button";
 import { LeaseStatusBadge } from "@/components/LeaseStatusBadge";
+import { SendForSigningButton } from "@/components/SendForSigningButton";
 import { Flash } from "@/components/Flash";
 import { formatDate, daysUntil } from "@/lib/dates";
 import type { LeaseStatus, Prisma } from "@prisma/client";
@@ -117,6 +118,7 @@ export default async function LeasesPage({
                 <th className="text-left px-4 py-2">Rent</th>
                 <th className="text-left px-4 py-2">Type</th>
                 <th className="text-left px-4 py-2">Status</th>
+                <th className="text-left px-4 py-2">Signing</th>
                 <th className="text-right px-4 py-2">&nbsp;</th>
               </tr>
             </thead>
@@ -153,11 +155,17 @@ export default async function LeasesPage({
                       {(l as any).leaseType === "MONTH_TO_MONTH" ? "Month-to-Month" : "Year-to-Year"}
                     </td>
                     <td className="px-4 py-3"><LeaseStatusBadge status={l.status} /></td>
+                    <td className="px-4 py-3">
+                      <SendForSigningButton
+                        leaseId={l.id}
+                        signingStatus={(l as any).signingStatus}
+                      />
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-3">
                         <Link
                           href={`/leases/generate?leaseId=${l.id}`}
-                          className="text-sm text-indigo-600 hover:text-indigo-700"
+                          className="text-sm text-slate-500 hover:text-slate-700"
                           title="Generate lease document"
                         >
                           Generate

@@ -170,6 +170,14 @@ model Lease {
   leaseType    String      @default("YEAR_TO_YEAR") // YEAR_TO_YEAR or MONTH_TO_MONTH
   status       LeaseStatus @default(ACTIVE)
   notes        String?
+
+  // Lease signing workflow
+  signingStatus       String?   // DRAFT | PENDING_SIGNATURE | SIGNED
+  leaseDocStoragePath  String?  // Supabase path to the generated docx
+  signedDocStoragePath String?  // Supabase path to the signed PDF
+  sentForSigningAt     DateTime?
+  signedAt             DateTime?
+
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
