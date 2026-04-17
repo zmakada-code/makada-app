@@ -167,6 +167,7 @@ model Lease {
   startDate    DateTime
   endDate      DateTime
   monthlyRent  Decimal     @db.Decimal(10, 2)
+  leaseType    String      @default("YEAR_TO_YEAR") // YEAR_TO_YEAR or MONTH_TO_MONTH
   status       LeaseStatus @default(ACTIVE)
   notes        String?
   createdAt    DateTime    @default(now())

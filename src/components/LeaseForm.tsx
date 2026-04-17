@@ -22,6 +22,7 @@ type Initial = {
   startDate?: string;
   endDate?: string;
   monthlyRent?: number | string;
+  leaseType?: string;
   status?: "ACTIVE" | "UPCOMING" | "ENDED" | "TERMINATED";
   notes?: string | null;
 };
@@ -48,6 +49,7 @@ export function LeaseForm({
     startDate: initial?.startDate ?? "",
     endDate: initial?.endDate ?? "",
     monthlyRent: String(initial?.monthlyRent ?? ""),
+    leaseType: initial?.leaseType ?? "YEAR_TO_YEAR",
     status: initial?.status ?? "UPCOMING",
     notes: initial?.notes ?? "",
   };
@@ -86,6 +88,12 @@ export function LeaseForm({
             step={1}
             defaultValue={values.monthlyRent}
           />
+        </Field>
+        <Field label="Lease type" error={errors.leaseType}>
+          <Select name="leaseType" defaultValue={values.leaseType}>
+            <option value="YEAR_TO_YEAR">Year-to-Year</option>
+            <option value="MONTH_TO_MONTH">Month-to-Month</option>
+          </Select>
         </Field>
         <Field
           label="Status"

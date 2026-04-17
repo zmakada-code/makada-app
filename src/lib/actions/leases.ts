@@ -13,6 +13,8 @@ import {
 
 const LEASE_STATUSES: LeaseStatus[] = ["ACTIVE", "UPCOMING", "ENDED", "TERMINATED"];
 
+const LEASE_TYPES = ["YEAR_TO_YEAR", "MONTH_TO_MONTH"] as const;
+
 export type LeaseFormState = {
   errors?: FieldErrors;
   values?: {
@@ -21,6 +23,7 @@ export type LeaseFormState = {
     startDate: string;
     endDate: string;
     monthlyRent: string;
+    leaseType: string;
     status: string;
     notes: string;
   };
@@ -85,6 +88,10 @@ export async function createLease(
   const startDate = parseDate(errors, "startDate", formData.get("startDate"));
   const endDate = parseDate(errors, "endDate", formData.get("endDate"));
   const monthlyRent = parseNumber(errors, "monthlyRent", formData.get("monthlyRent"));
+  const leaseTypeRaw = (formData.get("leaseType") ?? "YEAR_TO_YEAR").toString();
+  const leaseType = LEASE_TYPES.includes(leaseTypeRaw as typeof LEASE_TYPES[number])
+    ? leaseTypeRaw
+    : "YEAR_TO_YEAR";
   const status = parseStatus(errors, formData.get("status"));
   const notes = optionalString(formData.get("notes"));
 
@@ -102,6 +109,7 @@ export async function createLease(
     startDate: formData.get("startDate")?.toString() ?? "",
     endDate: formData.get("endDate")?.toString() ?? "",
     monthlyRent: String(monthlyRent),
+    leaseType,
     status,
     notes: notes ?? "",
   };
@@ -114,7 +122,7 @@ export async function createLease(
         await assertNoOverlappingActive(tx, unitId);
       }
       const lease = await tx.lease.create({
-        data: { tenantId, unitId, startDate, endDate, monthlyRent, status, notes },
+        data: { tenantId, unitId, startDate, endDate, monthlyRent, leaseType, status, notes },
       });
       if (status === "ACTIVE") {
         await tx.unit.update({ where: { id: unitId }, data: { occupancyStatus: "OCCUPIED" } });
@@ -147,6 +155,10 @@ export async function updateLease(
   const startDate = parseDate(errors, "startDate", formData.get("startDate"));
   const endDate = parseDate(errors, "endDate", formData.get("endDate"));
   const monthlyRent = parseNumber(errors, "monthlyRent", formData.get("monthlyRent"));
+  const leaseTypeRaw = (formData.get("leaseType") ?? "YEAR_TO_YEAR").toString();
+  const leaseType = LEASE_TYPES.includes(leaseTypeRaw as typeof LEASE_TYPES[number])
+    ? leaseTypeRaw
+    : "YEAR_TO_YEAR";
   const status = parseStatus(errors, formData.get("status"));
   const notes = optionalString(formData.get("notes"));
 
@@ -164,6 +176,7 @@ export async function updateLease(
     startDate: formData.get("startDate")?.toString() ?? "",
     endDate: formData.get("endDate")?.toString() ?? "",
     monthlyRent: String(monthlyRent),
+    leaseType,
     status,
     notes: notes ?? "",
   };
@@ -180,7 +193,7 @@ export async function updateLease(
 
       await tx.lease.update({
         where: { id },
-        data: { tenantId, unitId, startDate, endDate, monthlyRent, status, notes },
+        data: { tenantId, unitId, startDate, endDate, monthlyRent, leaseType, status, notes },
       });
 
       // Side effects on unit occupancy

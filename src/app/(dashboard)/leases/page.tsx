@@ -115,6 +115,7 @@ export default async function LeasesPage({
                 <th className="text-left px-4 py-2">Property · Unit</th>
                 <th className="text-left px-4 py-2">Dates</th>
                 <th className="text-left px-4 py-2">Rent</th>
+                <th className="text-left px-4 py-2">Type</th>
                 <th className="text-left px-4 py-2">Status</th>
                 <th className="text-right px-4 py-2">&nbsp;</th>
               </tr>
@@ -148,14 +149,26 @@ export default async function LeasesPage({
                       )}
                     </td>
                     <td className="px-4 py-3">{money(l.monthlyRent)}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500">
+                      {(l as any).leaseType === "MONTH_TO_MONTH" ? "Month-to-Month" : "Year-to-Year"}
+                    </td>
                     <td className="px-4 py-3"><LeaseStatusBadge status={l.status} /></td>
                     <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/leases/${l.id}/edit`}
-                        className="text-sm text-slate-600 hover:text-slate-900"
-                      >
-                        Edit
-                      </Link>
+                      <div className="flex items-center justify-end gap-3">
+                        <Link
+                          href={`/leases/generate?leaseId=${l.id}`}
+                          className="text-sm text-indigo-600 hover:text-indigo-700"
+                          title="Generate lease document"
+                        >
+                          Generate
+                        </Link>
+                        <Link
+                          href={`/leases/${l.id}/edit`}
+                          className="text-sm text-slate-600 hover:text-slate-900"
+                        >
+                          Edit
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 );

@@ -197,7 +197,15 @@ export default async function DashboardPage() {
                         {days >= 0 && ` (in ${days} day${days === 1 ? "" : "s"})`}
                       </div>
                     </div>
-                    <LeaseStatusBadge status={l.status} />
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Link
+                        href={`/leases/generate?leaseId=${l.id}`}
+                        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                      >
+                        Renew
+                      </Link>
+                      <LeaseStatusBadge status={l.status} />
+                    </div>
                   </li>
                 );
               })}

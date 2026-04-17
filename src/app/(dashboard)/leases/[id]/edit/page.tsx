@@ -87,6 +87,7 @@ export default async function EditLeasePage({
           startDate: toDateInputValue(lease.startDate),
           endDate: toDateInputValue(lease.endDate),
           monthlyRent: lease.monthlyRent.toString(),
+          leaseType: (lease as any).leaseType ?? "YEAR_TO_YEAR",
           status: lease.status,
           notes: lease.notes,
         }}
