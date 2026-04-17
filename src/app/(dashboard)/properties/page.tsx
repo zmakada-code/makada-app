@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { ButtonLink } from "@/components/ui/Button";
 import { Flash } from "@/components/Flash";
+import { PropertyPhoto } from "@/components/PropertyPhoto";
 import { getSignedDocumentUrl, getPublicDocumentUrl } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -60,9 +61,12 @@ async function PropertyGrid({ properties }: { properties: PropertyWithUnits[] })
   const photoUrls = await Promise.all(
     properties.map(async (p) => {
       if (!p.imageUrl) return null;
+      // If it's already a full URL (external image), use it directly
+      if (p.imageUrl.startsWith("http")) return p.imageUrl;
       // Try signed URL first, fall back to public URL
       const signed = await getSignedDocumentUrl(p.imageUrl, 60 * 60);
-      return signed || getPublicDocumentUrl(p.imageUrl);
+      if (signed) return signed;
+      return getPublicDocumentUrl(p.imageUrl);
     })
   );
 
@@ -79,19 +83,7 @@ async function PropertyGrid({ properties }: { properties: PropertyWithUnits[] })
             href={`/properties/${p.id}`}
             className="card overflow-hidden hover:border-slate-300 hover:shadow-sm transition group"
           >
-            {photoUrl ? (
-              <div className="h-36 bg-slate-100">
-                <img
-                  src={photoUrl}
-                  alt={p.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="h-36 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
-                <Building2 className="h-10 w-10 text-slate-300" />
-              </div>
-            )}
+            <PropertyPhoto url={photoUrl} name={p.name} />
             <div className="p-5">
               <div className="flex items-start justify-between">
                 <div className="min-w-0">
