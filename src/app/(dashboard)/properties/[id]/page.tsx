@@ -11,6 +11,7 @@ import { DocumentsSection } from "@/components/DocumentsSection";
 import { TicketsSection } from "@/components/TicketsSection";
 import { InquiriesSection } from "@/components/InquiriesSection";
 import { deleteProperty } from "@/lib/actions/properties";
+import { getSignedDocumentUrl } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -32,9 +33,26 @@ export default async function PropertyDetailPage({
   });
   if (!property) notFound();
 
+  // Get signed URL for property photo
+  let photoUrl: string | null = null;
+  if (property.imageUrl) {
+    photoUrl = await getSignedDocumentUrl(property.imageUrl, 60 * 60); // 1 hour
+  }
+
   return (
     <div>
       <Flash />
+
+      {photoUrl && (
+        <div className="mb-6 rounded-xl overflow-hidden border border-slate-200">
+          <img
+            src={photoUrl}
+            alt={property.name}
+            className="w-full h-56 object-cover"
+          />
+        </div>
+      )}
+
       <PageHeader
         title={property.name}
         description={property.address}

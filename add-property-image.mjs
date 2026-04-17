@@ -1,0 +1,41 @@
+/**
+ * Adds the imageUrl column to the Property table.
+ * Run: node add-property-image.mjs
+ */
+import pg from "pg";
+const { Client } = pg;
+
+const DATABASE_URL =
+  "postgresql://postgres.qitktpzegtpjkpjdkjka:TRjCT4IryUbyacZl@aws-1-us-east-2.pooler.supabase.com:5432/postgres";
+
+const client = new Client({ connectionString: DATABASE_URL });
+
+async function main() {
+  await client.connect();
+  console.log("Connected.\n");
+
+  // Check if column already exists
+  const { rows } = await client.query(`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_name = 'Property' AND column_name = 'imageUrl'
+  `);
+
+  if (rows.length > 0) {
+    console.log("Column imageUrl already exists on Property. Nothing to do.");
+    return;
+  }
+
+  await client.query(`ALTER TABLE "Property" ADD COLUMN "imageUrl" TEXT`);
+  console.log("✅ Added imageUrl column to Property table.");
+
+  // Show current properties
+  const { rows: props } = await client.query(`SELECT id, name, address, "imageUrl" FROM "Property"`);
+  console.log(`\nCurrent properties (${props.length}):`);
+  for (const p of props) {
+    console.log(`  ${p.name} — ${p.address} (image: ${p.imageUrl ?? "none"})`);
+  }
+}
+
+main()
+  .catch((e) => { console.error("Failed:", e); process.exit(1); })
+  .finally(() => client.end());

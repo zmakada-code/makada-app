@@ -106,6 +106,7 @@ model Property {
   id        String   @id @default(cuid())
   name      String
   address   String
+  imageUrl  String?  // Supabase Storage signed URL or external URL
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

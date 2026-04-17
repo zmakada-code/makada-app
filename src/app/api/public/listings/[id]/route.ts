@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSignedDocumentUrl } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,14 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    let propertyImageUrl: string | null = null;
+    if (unit.property.imageUrl) {
+      propertyImageUrl = await getSignedDocumentUrl(
+        unit.property.imageUrl,
+        60 * 60 * 24
+      );
+    }
+
     return NextResponse.json({
       id: unit.id,
       propertyName: unit.property.name,
@@ -33,6 +42,7 @@ export async function GET(
       rentAmount: unit.rentAmount,
       depositAmount: unit.depositAmount,
       description: unit.publicDescription ?? "",
+      propertyImageUrl,
     });
   } catch (err) {
     console.error("[listings/:id] DB error:", err);
