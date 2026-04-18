@@ -51,7 +51,15 @@ export async function sendEmail(opts: EmailOptions): Promise<boolean> {
 
     if (error) {
       console.error("[email] Resend error:", JSON.stringify(error));
-      throw new Error(`Resend error: ${error.message || JSON.stringify(error)}`);
+      // Check for common free-tier issues
+      const msg = error.message || JSON.stringify(error);
+      if (msg.includes("verify") || msg.includes("domain") || msg.includes("not allowed")) {
+        throw new Error(
+          `Resend cannot send to ${opts.to}. On the free tier with onboarding@resend.dev, ` +
+          `you can only send to the account owner's email. Add a verified domain in Resend to send to anyone.`
+        );
+      }
+      throw new Error(`Email error: ${msg}`);
     }
 
     console.log(`📧 Email sent successfully to ${opts.to} (id: ${data?.id})`);
