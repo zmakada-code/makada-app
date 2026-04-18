@@ -131,14 +131,21 @@ export async function POST(
       return NextResponse.json({ error: "Failed to upload signed lease" }, { status: 500 });
     }
 
-    // Update lease
+    // Update lease — mark as signed and set status to ACTIVE
     await prisma.lease.update({
       where: { id: lease.id },
       data: {
         signingStatus: "SIGNED",
         signedDocStoragePath: storagePath,
         signedAt: new Date(),
+        status: "ACTIVE",
       },
+    });
+
+    // Set the unit to OCCUPIED
+    await prisma.unit.update({
+      where: { id: lease.unitId },
+      data: { occupancyStatus: "OCCUPIED" },
     });
 
     // Create Document record

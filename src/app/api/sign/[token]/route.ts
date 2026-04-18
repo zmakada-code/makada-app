@@ -209,15 +209,28 @@ export async function POST(
       return NextResponse.json({ error: "Failed to upload signed lease" }, { status: 500 });
     }
 
-    // Update lease
+    // Update lease — mark as signed and set status to ACTIVE
     await prisma.lease.update({
       where: { id: row.leaseId },
       data: {
         signingStatus: "SIGNED",
         signedDocStoragePath: storagePath,
         signedAt: new Date(),
+        status: "ACTIVE",
       } as any,
     });
+
+    // Set the unit to OCCUPIED
+    const leaseForUnit = await prisma.lease.findUnique({
+      where: { id: row.leaseId },
+      select: { unitId: true },
+    });
+    if (leaseForUnit) {
+      await prisma.unit.update({
+        where: { id: leaseForUnit.unitId },
+        data: { occupancyStatus: "OCCUPIED" },
+      });
+    }
 
     // Mark token as used
     await prisma.$executeRawUnsafe(
