@@ -144,13 +144,21 @@ export async function POST(
     });
 
     // Send the email with the signing link
-    await sendLeaseSigningInvite(
-      recipientEmail,
-      lease.tenant.fullName,
-      lease.unit.property.name,
-      lease.unit.label,
-      token
-    );
+    try {
+      await sendLeaseSigningInvite(
+        recipientEmail,
+        lease.tenant.fullName,
+        lease.unit.property.name,
+        lease.unit.label,
+        token
+      );
+    } catch (emailErr) {
+      console.error("[send-via-email] email delivery failed:", emailErr);
+      return NextResponse.json(
+        { error: `Lease was prepared but email failed to send: ${(emailErr as Error).message}` },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

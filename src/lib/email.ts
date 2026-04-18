@@ -32,11 +32,16 @@ export async function sendEmail(opts: EmailOptions): Promise<boolean> {
     console.log(`  To: ${opts.to}`);
     console.log(`  Subject: ${opts.subject}`);
     console.log(`  Reply-To: ${opts.replyTo || "n/a"}`);
-    return false;
+    throw new Error("RESEND_API_KEY is not configured — email cannot be sent");
   }
 
+  console.log(`📧 Attempting email via Resend...`);
+  console.log(`  From: ${FROM_EMAIL}`);
+  console.log(`  To: ${opts.to}`);
+  console.log(`  Subject: ${opts.subject}`);
+
   try {
-    const { error } = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: opts.to,
       subject: opts.subject,
@@ -45,15 +50,15 @@ export async function sendEmail(opts: EmailOptions): Promise<boolean> {
     });
 
     if (error) {
-      console.error("[email] Resend error:", error);
-      return false;
+      console.error("[email] Resend error:", JSON.stringify(error));
+      throw new Error(`Resend error: ${error.message || JSON.stringify(error)}`);
     }
 
-    console.log(`📧 Email sent to ${opts.to}: ${opts.subject}`);
+    console.log(`📧 Email sent successfully to ${opts.to} (id: ${data?.id})`);
     return true;
   } catch (err) {
     console.error("[email] send failed:", err);
-    return false;
+    throw err;
   }
 }
 
