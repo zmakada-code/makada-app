@@ -8,7 +8,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { LeaseStatusBadge } from "@/components/LeaseStatusBadge";
 import { SendForSigningButton } from "@/components/SendForSigningButton";
 import { Flash } from "@/components/Flash";
-import { formatDate, daysUntil } from "@/lib/dates";
+import { formatDate, daysUntil, toDateInputValue } from "@/lib/dates";
 import type { LeaseStatus, Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +55,7 @@ export default async function LeasesPage({
         select: {
           id: true,
           label: true,
+          depositAmount: true,
           property: { select: { id: true, name: true } },
         },
       },
@@ -160,6 +161,12 @@ export default async function LeasesPage({
                         leaseId={l.id}
                         signingStatus={(l as any).signingStatus}
                         tenantEmail={l.tenant.email}
+                        leaseDetails={{
+                          startDate: toDateInputValue(l.startDate),
+                          endDate: toDateInputValue(l.endDate),
+                          monthlyRent: l.monthlyRent.toString(),
+                          securityDeposit: l.unit.depositAmount?.toString() || "0",
+                        }}
                       />
                     </td>
                     <td className="px-4 py-3 text-right">

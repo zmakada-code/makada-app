@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Send, Loader2, Clock, FileCheck, Download, XCircle, Mail } from "lucide-react";
+import { Send, Loader2, Clock, FileCheck, Download, XCircle, Mail, Pencil } from "lucide-react";
 
 const STATUS_DISPLAY: Record<
   string,
@@ -19,25 +19,37 @@ const STATUS_DISPLAY: Record<
   },
 };
 
+export type LeaseDetails = {
+  startDate: string;
+  endDate: string;
+  monthlyRent: string;
+  securityDeposit: string;
+};
+
 export function SendForSigningButton({
   leaseId,
   signingStatus,
   tenantEmail,
+  leaseDetails,
 }: {
   leaseId: string;
   signingStatus: string | null;
   tenantEmail?: string | null;
+  leaseDetails?: LeaseDetails;
 }) {
   const [sending, setSending] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [status, setStatus] = useState(signingStatus);
   const [error, setError] = useState("");
   const [voided, setVoided] = useState(false);
-  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [emailInput, setEmailInput] = useState(tenantEmail || "");
 
-  // After cancelling, reset so the send buttons show again
-  // (voided no longer used — cancel just resets signing status)
+  // Editable lease fields
+  const [startDate, setStartDate] = useState(leaseDetails?.startDate || "");
+  const [endDate, setEndDate] = useState(leaseDetails?.endDate || "");
+  const [monthlyRent, setMonthlyRent] = useState(leaseDetails?.monthlyRent || "");
+  const [securityDeposit, setSecurityDeposit] = useState(leaseDetails?.securityDeposit || "");
 
   if (status && STATUS_DISPLAY[status]) {
     const display = STATUS_DISPLAY[status];
@@ -62,7 +74,7 @@ export function SendForSigningButton({
           onClick={handleCancel}
           disabled={cancelling}
           className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
-          title="Void this lease"
+          title="Void this lease signing"
         >
           {cancelling ? (
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -108,6 +120,24 @@ export function SendForSigningButton({
     setError("");
 
     try {
+      // First save any lease field edits
+      if (startDate || endDate || monthlyRent || securityDeposit) {
+        const updateRes = await fetch(`/api/leases/${leaseId}/update-fields`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+            monthlyRent: monthlyRent || undefined,
+            securityDeposit: securityDeposit || undefined,
+          }),
+        });
+        if (!updateRes.ok) {
+          const data = await updateRes.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to update lease fields");
+        }
+      }
+
       const res = await fetch(`/api/leases/${leaseId}/send-via-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -120,7 +150,7 @@ export function SendForSigningButton({
       }
 
       setStatus("PENDING_SIGNATURE");
-      setShowEmailInput(false);
+      setShowEmailForm(false);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -149,7 +179,6 @@ export function SendForSigningButton({
         throw new Error(data.error || "Failed to cancel");
       }
 
-      // Reset status so the send buttons show again
       setStatus(null);
     } catch (err) {
       setError((err as Error).message);
@@ -158,32 +187,82 @@ export function SendForSigningButton({
     }
   }
 
-  if (showEmailInput) {
+  if (showEmailForm) {
     return (
-      <div className="flex items-center gap-2">
-        <input
-          type="email"
-          value={emailInput}
-          onChange={(e) => setEmailInput(e.target.value)}
-          placeholder="tenant@email.com"
-          className="w-44 rounded-md border border-slate-300 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          onKeyDown={(e) => e.key === "Enter" && handleSendViaEmail()}
-        />
-        <button
-          onClick={handleSendViaEmail}
-          disabled={sending}
-          className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
-        >
-          {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-          Send
-        </button>
-        <button
-          onClick={() => setShowEmailInput(false)}
-          className="text-xs text-slate-400 hover:text-slate-600"
-        >
-          Cancel
-        </button>
-        {error && <span className="text-xs text-red-600">{error}</span>}
+      <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm space-y-2 min-w-[280px]">
+        <div className="text-xs font-medium text-slate-700 mb-1">Review lease details before sending</div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] uppercase tracking-wide text-slate-500">Start date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wide text-slate-500">End date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wide text-slate-500">Monthly rent</label>
+            <input
+              type="number"
+              value={monthlyRent}
+              onChange={(e) => setMonthlyRent(e.target.value)}
+              className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+              step="0.01"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wide text-slate-500">Security deposit</label>
+            <input
+              type="number"
+              value={securityDeposit}
+              onChange={(e) => setSecurityDeposit(e.target.value)}
+              className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+              step="0.01"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[10px] uppercase tracking-wide text-slate-500">Send to email</label>
+          <input
+            type="email"
+            value={emailInput}
+            onChange={(e) => setEmailInput(e.target.value)}
+            placeholder="tenant@email.com"
+            className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+            onKeyDown={(e) => e.key === "Enter" && handleSendViaEmail()}
+          />
+        </div>
+
+        {error && <div className="text-xs text-red-600">{error}</div>}
+
+        <div className="flex items-center justify-between pt-1">
+          <button
+            onClick={() => setShowEmailForm(false)}
+            className="text-xs text-slate-400 hover:text-slate-600"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSendViaEmail}
+            disabled={sending}
+            className="inline-flex items-center gap-1 rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+            Send lease
+          </button>
+        </div>
       </div>
     );
   }
@@ -200,7 +279,7 @@ export function SendForSigningButton({
         Portal
       </button>
       <button
-        onClick={() => setShowEmailInput(true)}
+        onClick={() => setShowEmailForm(true)}
         className="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-slate-800"
         title="Send signing link via email"
       >

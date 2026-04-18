@@ -250,14 +250,14 @@ export async function POST(
       },
     });
 
-    // Auto-create tenant portal account
+    // Auto-create tenant portal account with the email the lease was sent to
+    // and default password "tenant1234"
     let accountCreated = false;
     try {
-      const tempPassword = crypto.randomBytes(12).toString("base64url");
       const { data: authData, error: authError } =
         await supabase.auth.admin.createUser({
           email: row.email,
-          password: tempPassword,
+          password: "tenant1234",
           email_confirm: true,
           user_metadata: { full_name: row.tenantName },
         });
@@ -269,16 +269,26 @@ export async function POST(
         }
       } else if (authData?.user) {
         accountCreated = true;
-        console.log(`✅ Created portal account for ${row.email}`);
-
-        // Send password reset email so they can set their own password
-        await supabase.auth.admin.generateLink({
-          type: "recovery",
-          email: row.email,
-        });
+        console.log(`✅ Created portal account for ${row.email} with default password`);
       }
     } catch (authErr) {
       console.error("[sign-token] Auth account creation failed:", authErr);
+    }
+
+    // Also update the tenant record's email if it's different
+    try {
+      const leaseData = await prisma.lease.findUnique({
+        where: { id: row.leaseId },
+        select: { tenantId: true },
+      });
+      if (leaseData) {
+        await prisma.tenant.update({
+          where: { id: leaseData.tenantId },
+          data: { email: row.email },
+        });
+      }
+    } catch {
+      // non-critical
     }
 
     console.log(`✅ Lease signed via email link: ${row.tenantName} (${row.email})`);

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import type { LinkedEntityType } from "@prisma/client";
 import { ButtonLink } from "@/components/ui/Button";
 import { formatDate } from "@/lib/dates";
+import { DocumentDeleteButton } from "@/components/DocumentDeleteButton";
+import { deleteDocument } from "@/lib/actions/documents";
 
 const typeLabels: Record<string, string> = {
   LEASE: "Lease",
@@ -87,19 +89,29 @@ export async function DocumentsSection({
       ) : (
         <div className="card divide-y divide-slate-100">
           {docs.map((d) => (
-            <Link
+            <div
               key={d.id}
-              href={`/documents/${d.id}`}
               className="flex items-center justify-between px-4 py-3 hover:bg-slate-50"
             >
-              <div className="min-w-0">
+              <Link href={`/documents/${d.id}`} className="min-w-0 flex-1">
                 <div className="text-sm font-medium truncate">{d.filename}</div>
                 <div className="text-xs text-slate-500">
                   {typeLabels[d.type] || d.type} · uploaded {formatDate(d.uploadedAt)}
                 </div>
+              </Link>
+              <div className="flex items-center gap-2 ml-2">
+                <Link href={`/documents/${d.id}`} className="text-xs text-slate-400 hover:text-slate-600">
+                  Open →
+                </Link>
+                <DocumentDeleteButton
+                  action={async (fd) => {
+                    "use server";
+                    fd.append("id", d.id);
+                    await deleteDocument(fd);
+                  }}
+                />
               </div>
-              <span className="text-xs text-slate-400">Open →</span>
-            </Link>
+            </div>
           ))}
         </div>
       )}
