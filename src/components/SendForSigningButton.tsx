@@ -36,14 +36,8 @@ export function SendForSigningButton({
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [emailInput, setEmailInput] = useState(tenantEmail || "");
 
-  if (voided) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium text-red-700 bg-red-50 border-red-200">
-        <XCircle className="h-3 w-3" />
-        Voided
-      </span>
-    );
-  }
+  // After cancelling, reset so the send buttons show again
+  // (voided no longer used — cancel just resets signing status)
 
   if (status && STATUS_DISPLAY[status]) {
     const display = STATUS_DISPLAY[status];
@@ -137,7 +131,7 @@ export function SendForSigningButton({
   async function handleCancel() {
     if (
       !confirm(
-        "Are you sure you want to void this lease? This will terminate the lease and set the unit to vacant. This cannot be undone."
+        "Cancel this lease signing? The lease will stay active but the signing will reset so you can re-send it."
       )
     )
       return;
@@ -152,10 +146,11 @@ export function SendForSigningButton({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to void lease");
+        throw new Error(data.error || "Failed to cancel");
       }
 
-      setVoided(true);
+      // Reset status so the send buttons show again
+      setStatus(null);
     } catch (err) {
       setError((err as Error).message);
     } finally {

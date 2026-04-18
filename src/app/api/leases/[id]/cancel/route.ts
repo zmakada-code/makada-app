@@ -7,8 +7,9 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/leases/[id]/cancel
  *
- * Voids a lease — sets status to TERMINATED, clears signing status,
- * and optionally removes uploaded lease documents from storage.
+ * Resets a lease's signing status back to draft so it can be re-sent.
+ * Cleans up uploaded PDFs and signing metadata from storage.
+ * The lease stays ACTIVE — it's just the signing that resets.
  */
 export async function POST(
   _request: Request,
@@ -43,18 +44,22 @@ export async function POST(
     if ((lease as any).signedDocStoragePath) {
       pathsToRemove.push((lease as any).signedDocStoragePath);
     }
-    // Also remove the signing fields metadata
     pathsToRemove.push(`lease/${lease.id}/signing-fields.json`);
 
     if (pathsToRemove.length > 0) {
       await supabase.storage.from("documents").remove(pathsToRemove);
     }
 
-    // Void the lease
+    // Invalidate any outstanding signing tokens for this lease
+    await prisma.$executeRawUnsafe(
+      `UPDATE "SigningToken" SET "usedAt" = NOW() WHERE "leaseId" = $1 AND "usedAt" IS NULL`,
+      lease.id
+    );
+
+    // Reset signing status — keep the lease ACTIVE so it can be re-sent
     await prisma.lease.update({
       where: { id: params.id },
       data: {
-        status: "TERMINATED",
         signingStatus: null,
         leaseDocStoragePath: null,
         signedDocStoragePath: null,
@@ -63,24 +68,18 @@ export async function POST(
       } as any,
     });
 
-    // Set the unit back to VACANT
-    await prisma.unit.update({
-      where: { id: lease.unitId },
-      data: { occupancyStatus: "VACANT" },
-    });
-
     console.log(
-      `❌ Lease voided: ${lease.tenant.fullName} — ${lease.unit.property.name} Unit ${lease.unit.label}`
+      `🔄 Lease signing reset: ${lease.tenant.fullName} — ${lease.unit.property.name} Unit ${lease.unit.label}`
     );
 
     return NextResponse.json({
       success: true,
-      message: `Lease for ${lease.tenant.fullName} has been voided.`,
+      message: `Signing cancelled for ${lease.tenant.fullName}. You can now re-send the lease.`,
     });
   } catch (err) {
     console.error("[lease-cancel] error:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to cancel lease" },
+      { error: err instanceof Error ? err.message : "Failed to cancel" },
       { status: 500 }
     );
   }
