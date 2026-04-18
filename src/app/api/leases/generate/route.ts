@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateLease, leaseFilename, type LeaseInput } from "@/lib/lease-generator";
+import { generateLeasePdf, leasePdfFilename, type LeaseInput } from "@/lib/lease-pdf-generator";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import crypto from "crypto";
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * Query params:
  *   ?save=true — also upload to Supabase Storage and create a Document record
  *
- * Returns the generated .docx file as a download.
+ * Returns the generated .pdf file as a download.
  */
 export async function POST(request: Request) {
   try {
@@ -27,7 +27,6 @@ export async function POST(request: Request) {
     let input: LeaseInput;
 
     if (body.leaseId) {
-      // Auto-fill from database
       input = await buildInputFromLease(body.leaseId);
     } else if (body.data) {
       input = body.data as LeaseInput;
@@ -43,8 +42,8 @@ export async function POST(request: Request) {
       Object.assign(input, body.overrides);
     }
 
-    const buffer = await generateLease(input);
-    const filename = leaseFilename(input);
+    const { pdfBuffer } = await generateLeasePdf(input, false);
+    const filename = leasePdfFilename(input);
 
     // Optionally save to Supabase Storage and create Document record
     if (save && body.leaseId) {
@@ -56,9 +55,8 @@ export async function POST(request: Request) {
         const supabase = createSupabaseAdminClient();
         const storagePath = `lease/${lease.id}/${crypto.randomUUID()}-${filename}`;
 
-        await supabase.storage.from("documents").upload(storagePath, buffer, {
-          contentType:
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        await supabase.storage.from("documents").upload(storagePath, pdfBuffer, {
+          contentType: "application/pdf",
           upsert: false,
         });
 
@@ -75,10 +73,9 @@ export async function POST(request: Request) {
       }
     }
 
-    return new Response(new Uint8Array(buffer), {
+    return new Response(new Uint8Array(pdfBuffer), {
       headers: {
-        "Content-Type":
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });
@@ -133,7 +130,6 @@ async function buildInputFromLease(leaseId: string): Promise<LeaseInput> {
       year: "numeric",
     });
 
-  // Get initials from tenant name
   const nameParts = lease.tenant.fullName.split(" ");
   const initials =
     nameParts.length >= 2
@@ -142,9 +138,9 @@ async function buildInputFromLease(leaseId: string): Promise<LeaseInput> {
 
   return {
     TENANT_1_NAME: lease.tenant.fullName,
-    TENANT_2_NAME: "", // second tenant — user can fill in via the form
+    TENANT_2_NAME: "",
     PROPERTY_ADDRESS: lease.unit.property.address,
-    UNIT_NUMBER: lease.unit.label, // used for address formatting and filename
+    UNIT_NUMBER: lease.unit.label,
     BEDROOM_COUNT: String(lease.unit.bedrooms),
     BATHROOM_COUNT: String(lease.unit.bathrooms),
     RENT_AMOUNT: `$${Number(lease.monthlyRent).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,

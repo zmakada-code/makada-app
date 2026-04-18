@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateLease, leaseFilename, type LeaseInput } from "@/lib/lease-generator";
+import { generateLeasePdf, leasePdfFilename, type LeaseInput } from "@/lib/lease-pdf-generator";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import crypto from "crypto";
 
@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/leases/[id]/send-for-signing
  *
- * Generates a lease docx with the landlord's signature embedded,
- * uploads it to Supabase Storage, updates the lease's signing status,
- * and sends an email notification to the tenant.
+ * Generates a lease PDF with the landlord's signature already embedded,
+ * uploads it to Supabase Storage along with signing field metadata,
+ * updates the lease's signing status, and sends an email notification.
  */
 export async function POST(
   _request: Request,
@@ -30,7 +30,6 @@ export async function POST(
       return NextResponse.json({ error: "Lease not found" }, { status: 404 });
     }
 
-    // Build lease input from the database
     const formatDate = (d: Date) =>
       d.toLocaleDateString("en-US", {
         month: "long",
@@ -64,18 +63,18 @@ export async function POST(
       TENANT_2_SIGN_DATE: "",
     };
 
-    // Generate the lease with landlord signature embedded (no tenant sig yet)
-    const buffer = await generateLease(input, {});
-    const filename = leaseFilename(input);
+    // Generate the lease PDF with landlord signature embedded
+    const { pdfBuffer, signingFields, pageCount } = await generateLeasePdf(input, true);
+    const filename = leasePdfFilename(input);
 
-    // Upload to Supabase Storage
+    // Upload PDF to Supabase Storage
     const supabase = createSupabaseAdminClient();
     const storagePath = `lease/${lease.id}/${crypto.randomUUID()}-${filename}`;
 
     const { error: uploadError } = await supabase.storage
       .from("documents")
-      .upload(storagePath, buffer, {
-        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      .upload(storagePath, pdfBuffer, {
+        contentType: "application/pdf",
         upsert: false,
       });
 
@@ -83,6 +82,19 @@ export async function POST(
       console.error("Lease upload error:", uploadError);
       return NextResponse.json({ error: "Failed to upload lease document" }, { status: 500 });
     }
+
+    // Also upload the signing field metadata as JSON
+    const metadataPath = `lease/${lease.id}/signing-fields.json`;
+    const metadataJson = JSON.stringify({ signingFields, pageCount });
+
+    // Delete existing metadata if any (upsert)
+    await supabase.storage.from("documents").remove([metadataPath]);
+    await supabase.storage
+      .from("documents")
+      .upload(metadataPath, Buffer.from(metadataJson), {
+        contentType: "application/json",
+        upsert: true,
+      });
 
     // Update lease signing status
     await prisma.lease.update({
@@ -106,7 +118,7 @@ export async function POST(
       },
     });
 
-    // Send email notification to tenant
+    // Send email notification
     if (lease.tenant.email) {
       try {
         await sendLeaseSigningEmail(
@@ -117,7 +129,6 @@ export async function POST(
         );
       } catch (emailErr) {
         console.error("Failed to send signing email:", emailErr);
-        // Don't fail the whole operation if email fails
       }
     }
 
@@ -135,9 +146,6 @@ export async function POST(
   }
 }
 
-/**
- * Send an email to the tenant notifying them that a lease is ready for signing.
- */
 async function sendLeaseSigningEmail(
   email: string,
   tenantName: string,
@@ -147,44 +155,11 @@ async function sendLeaseSigningEmail(
   const portalUrl = process.env.TENANT_PORTAL_URL || "https://zmak-zmakada.replit.app";
   const signingUrl = `${portalUrl}/tenant/leases`;
 
-  // Use Supabase's built-in email if available, or console log for now
-  const { createSupabaseAdminClient: createAdmin } = await import("@/lib/supabase/admin");
-  const supabase = createAdmin();
-
-  // Use Supabase Auth admin to send a custom email
-  // Fallback: use the Supabase edge function or direct SMTP
-  // For now, we'll use a simple approach via the Supabase REST API
   const subject = `Lease Ready for Signing — ${propertyName}, Unit ${unitLabel}`;
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #1e293b;">Lease Ready for Your Signature</h2>
-      <p>Hi ${tenantName},</p>
-      <p>Your lease agreement for <strong>${propertyName}, Unit ${unitLabel}</strong> is ready for your review and signature.</p>
-      <p>Please log in to the tenant portal to review and sign your lease:</p>
-      <p style="margin: 24px 0;">
-        <a href="${signingUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-          Review &amp; Sign Lease
-        </a>
-      </p>
-      <p style="color: #64748b; font-size: 14px;">If you have any questions, please contact Makada Properties.</p>
-      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-      <p style="color: #94a3b8; font-size: 12px;">Makada Properties · 303 Lakeview Way, Emerald Hills, CA 94062</p>
-    </div>
-  `;
 
-  // Try sending via Supabase auth.admin (uses configured SMTP)
-  try {
-    const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
-      data: { __skip_invite: true }, // We don't actually want to invite, just email
-    });
-    // This won't work for existing users, so we fall back:
-    if (error) throw error;
-  } catch {
-    // Fallback: log the email details. In production, wire up SMTP or a service like Resend.
-    console.log(`📧 LEASE SIGNING EMAIL`);
-    console.log(`  To: ${email}`);
-    console.log(`  Subject: ${subject}`);
-    console.log(`  Portal link: ${signingUrl}`);
-    console.log(`  (Email service not configured — notification logged only)`);
-  }
+  console.log(`📧 LEASE SIGNING EMAIL`);
+  console.log(`  To: ${email}`);
+  console.log(`  Subject: ${subject}`);
+  console.log(`  Portal link: ${signingUrl}`);
+  console.log(`  (Email service not configured — notification logged only)`);
 }

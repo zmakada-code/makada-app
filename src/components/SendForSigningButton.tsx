@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Send, Loader2, Check, Clock, FileCheck } from "lucide-react";
+import { Send, Loader2, Check, Clock, FileCheck, Download } from "lucide-react";
 
 const STATUS_DISPLAY: Record<string, { label: string; icon: typeof Check; className: string }> = {
   PENDING_SIGNATURE: {
@@ -31,12 +31,23 @@ export function SendForSigningButton({
     const display = STATUS_DISPLAY[status];
     const Icon = display.icon;
     return (
-      <span
-        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${display.className}`}
-      >
-        <Icon className="h-3 w-3" />
-        {display.label}
-      </span>
+      <div className="flex items-center gap-2">
+        <span
+          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${display.className}`}
+        >
+          <Icon className="h-3 w-3" />
+          {display.label}
+        </span>
+        {/* Download link for lease PDF */}
+        <a
+          href={`/api/leases/${leaseId}/download?type=${status === "SIGNED" ? "signed" : "unsigned"}`}
+          className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+          title={`Download ${status === "SIGNED" ? "signed" : "unsigned"} lease PDF`}
+        >
+          <Download className="h-3 w-3" />
+          PDF
+        </a>
+      </div>
     );
   }
 

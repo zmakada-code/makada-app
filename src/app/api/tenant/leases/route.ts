@@ -39,13 +39,17 @@ export async function GET(request: Request) {
     orderBy: { startDate: "desc" },
   });
 
-  // Build response with signed URLs for lease documents
+  // Build response with download URLs and signed URLs for lease documents
+  const adminBase = process.env.NEXT_PUBLIC_APP_URL || url.origin;
+
   const leasesWithDocs = await Promise.all(
     leases.map(async (l) => {
+      // Use the download endpoint for reliable PDF downloads
       let leaseDocUrl: string | null = null;
       let signedDocUrl: string | null = null;
 
       if (l.leaseDocStoragePath) {
+        // Provide both: a direct download URL and a signed storage URL for viewing
         leaseDocUrl = await getSignedDocumentUrl(l.leaseDocStoragePath, 60 * 60);
       }
       if (l.signedDocStoragePath) {
@@ -64,6 +68,8 @@ export async function GET(request: Request) {
         signedAt: l.signedAt || null,
         leaseDocUrl,
         signedDocUrl,
+        // Also provide the admin base URL so tenant portal can construct download URLs
+        adminBaseUrl: adminBase,
         unit: {
           id: l.unit.id,
           label: l.unit.label,

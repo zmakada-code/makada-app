@@ -119,7 +119,7 @@ export function GenerateLeaseForm({ leaseId }: { leaseId?: string }) {
       const blob = await res.blob();
       const filename =
         res.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1] ||
-        "lease.docx";
+        "lease.pdf";
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
