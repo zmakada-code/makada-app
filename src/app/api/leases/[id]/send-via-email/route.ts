@@ -2,23 +2,29 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateLeasePdf, leasePdfFilename, type LeaseInput } from "@/lib/lease-pdf-generator";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { sendLeaseSigningEmail } from "@/lib/email";
+import { sendLeaseSigningInvite } from "@/lib/email";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/leases/[id]/send-for-signing
+ * POST /api/leases/[id]/send-via-email
  *
- * Generates a lease PDF with the landlord's signature already embedded,
- * uploads it to Supabase Storage along with signing field metadata,
- * updates the lease's signing status, and sends an email notification.
+ * Send a lease for signing via email to a specific email address.
+ * Creates a secure one-time signing token. The recipient clicks the link,
+ * views and signs the PDF, and the signed version returns to the admin app.
+ *
+ * Works for both existing and new tenants.
+ *
+ * Body: { email?: string } (optional override; defaults to tenant's email)
  */
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const body = await request.json().catch(() => ({}));
+
     const lease = await prisma.lease.findUnique({
       where: { id: params.id },
       include: {
@@ -31,12 +37,17 @@ export async function POST(
       return NextResponse.json({ error: "Lease not found" }, { status: 404 });
     }
 
+    const recipientEmail = (body.email || lease.tenant.email || "").trim().toLowerCase();
+    if (!recipientEmail) {
+      return NextResponse.json(
+        { error: "No email address provided and tenant has no email on file" },
+        { status: 400 }
+      );
+    }
+
+    // Generate the lease PDF with landlord signature
     const formatDate = (d: Date) =>
-      d.toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      });
+      d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
     const nameParts = lease.tenant.fullName.split(" ");
     const initials =
@@ -64,11 +75,10 @@ export async function POST(
       TENANT_2_SIGN_DATE: "",
     };
 
-    // Generate the lease PDF with landlord signature embedded
     const { pdfBuffer, signingFields, pageCount } = await generateLeasePdf(input, true);
     const filename = leasePdfFilename(input);
 
-    // Upload PDF to Supabase Storage
+    // Upload PDF to storage
     const supabase = createSupabaseAdminClient();
     const storagePath = `lease/${lease.id}/${crypto.randomUUID()}-${filename}`;
 
@@ -81,33 +91,47 @@ export async function POST(
 
     if (uploadError) {
       console.error("Lease upload error:", uploadError);
-      return NextResponse.json({ error: "Failed to upload lease document" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to upload lease" }, { status: 500 });
     }
 
-    // Also upload the signing field metadata as JSON
+    // Store signing field metadata
     const metadataPath = `lease/${lease.id}/signing-fields.json`;
-    const metadataJson = JSON.stringify({ signingFields, pageCount });
-
-    // Delete existing metadata if any (upsert)
     await supabase.storage.from("documents").remove([metadataPath]);
     await supabase.storage
       .from("documents")
-      .upload(metadataPath, Buffer.from(metadataJson), {
+      .upload(metadataPath, Buffer.from(JSON.stringify({ signingFields, pageCount })), {
         contentType: "application/json",
         upsert: true,
       });
 
-    // Update lease signing status
+    // Generate a secure signing token (valid for 7 days)
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    // Store the token directly in the database
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "SigningToken" ("id", "token", "leaseId", "email", "tenantName", "expiresAt")
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      crypto.randomUUID(),
+      token,
+      lease.id,
+      recipientEmail,
+      lease.tenant.fullName,
+      expiresAt
+    );
+
+    // Update the lease
     await prisma.lease.update({
       where: { id: lease.id },
       data: {
         signingStatus: "PENDING_SIGNATURE",
         leaseDocStoragePath: storagePath,
         sentForSigningAt: new Date(),
-      },
+      } as any,
     });
 
-    // Create a Document record for the unsigned lease
+    // Create Document record
     await prisma.document.create({
       data: {
         filename: `UNSIGNED-${filename}`,
@@ -119,31 +143,25 @@ export async function POST(
       },
     });
 
-    // Send email notification
-    if (lease.tenant.email) {
-      try {
-        await sendLeaseSigningEmail(
-          lease.tenant.email,
-          lease.tenant.fullName,
-          lease.unit.property.name,
-          lease.unit.label
-        );
-      } catch (emailErr) {
-        console.error("Failed to send signing email:", emailErr);
-      }
-    }
+    // Send the email with the signing link
+    await sendLeaseSigningInvite(
+      recipientEmail,
+      lease.tenant.fullName,
+      lease.unit.property.name,
+      lease.unit.label,
+      token
+    );
 
     return NextResponse.json({
       success: true,
       signingStatus: "PENDING_SIGNATURE",
-      message: `Lease sent to ${lease.tenant.fullName} for signing.`,
+      message: `Lease signing link sent to ${recipientEmail}.`,
     });
   } catch (err) {
-    console.error("[send-for-signing] error:", err);
+    console.error("[send-via-email] error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed" },
       { status: 500 }
     );
   }
 }
-

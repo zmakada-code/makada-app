@@ -50,7 +50,7 @@ export default async function LeasesPage({
     where,
     orderBy: [{ status: "asc" }, { endDate: "asc" }],
     include: {
-      tenant: { select: { id: true, fullName: true } },
+      tenant: { select: { id: true, fullName: true, email: true } },
       unit: {
         select: {
           id: true,
@@ -159,6 +159,7 @@ export default async function LeasesPage({
                       <SendForSigningButton
                         leaseId={l.id}
                         signingStatus={(l as any).signingStatus}
+                        tenantEmail={l.tenant.email}
                       />
                     </td>
                     <td className="px-4 py-3 text-right">
