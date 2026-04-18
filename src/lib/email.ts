@@ -137,7 +137,7 @@ export async function sendLeaseSigningInvite(
   signingToken: string
 ) {
   const adminBase =
-    process.env.NEXT_PUBLIC_APP_URL || "https://makada-app-5iv3.vercel.app";
+    process.env.NEXT_PUBLIC_APP_URL || "https://makada-app.vercel.app";
   const signingUrl = `${adminBase}/sign/${signingToken}`;
 
   const subject = `Sign Your Lease — ${propertyName}, Unit ${unitLabel}`;
