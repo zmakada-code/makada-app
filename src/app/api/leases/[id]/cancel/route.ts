@@ -50,9 +50,10 @@ export async function POST(
       await supabase.storage.from("documents").remove(pathsToRemove);
     }
 
-    // Invalidate any outstanding signing tokens for this lease
+    // Delete all signing tokens for this lease so old links show
+    // "invalid" instead of "already signed" — avoids tenant confusion
     await prisma.$executeRawUnsafe(
-      `UPDATE "SigningToken" SET "usedAt" = NOW() WHERE "leaseId" = $1 AND "usedAt" IS NULL`,
+      `DELETE FROM "SigningToken" WHERE "leaseId" = $1`,
       lease.id
     );
 

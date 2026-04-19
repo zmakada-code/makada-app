@@ -47,12 +47,21 @@ export async function GET(
 
     // Check if already used
     if (row.usedAt) {
-      return NextResponse.json({ error: "This lease has already been signed." }, { status: 410 });
+      return NextResponse.json({
+        error: "This signing link has already been used. If the lease was voided and re-sent, please check your email for a new signing link."
+      }, { status: 410 });
     }
 
     // Check lease status
+    if (row.signingStatus === "SIGNED") {
+      return NextResponse.json({
+        error: "This lease has already been signed."
+      }, { status: 410 });
+    }
     if (row.signingStatus !== "PENDING_SIGNATURE") {
-      return NextResponse.json({ error: "This lease is no longer available for signing." }, { status: 410 });
+      return NextResponse.json({
+        error: "This lease is no longer available for signing. It may have been voided — please check your email for a new signing link."
+      }, { status: 410 });
     }
 
     // Get signed URL for the PDF
@@ -143,10 +152,14 @@ export async function POST(
       return NextResponse.json({ error: "This signing link has expired" }, { status: 410 });
     }
     if (row.usedAt) {
-      return NextResponse.json({ error: "This lease has already been signed" }, { status: 410 });
+      return NextResponse.json({
+        error: "This signing link has already been used. If the lease was voided and re-sent, please check your email for a new signing link."
+      }, { status: 410 });
     }
     if (row.signingStatus !== "PENDING_SIGNATURE") {
-      return NextResponse.json({ error: "Lease is not available for signing" }, { status: 410 });
+      return NextResponse.json({
+        error: "This lease is no longer available for signing. It may have been voided — please check your email for a new signing link."
+      }, { status: 410 });
     }
     if (!row.leaseDocStoragePath) {
       return NextResponse.json({ error: "Lease PDF not found" }, { status: 500 });
