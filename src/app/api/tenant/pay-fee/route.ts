@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 
-const CARD_FEE_PERCENT = 0.035; // 3.5% convenience fee for credit/debit card
 const ACH_FEE_CENTS = 300; // $3.00 ACH convenience fee
 
 /**
@@ -18,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { authUserId, type, feeId, returnUrl, paymentMethod } = await req.json();
+    const { authUserId, type, feeId, returnUrl } = await req.json();
 
     if (!authUserId || !type) {
       return NextResponse.json({ error: "authUserId and type are required" }, { status: 400 });
@@ -103,58 +102,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid payment type" }, { status: 400 });
     }
 
-    const isCard = paymentMethod === "card";
-
-    // Build line items
-    const lineItems: any[] = [
-      {
-        price_data: {
-          currency: "usd",
-          unit_amount: Math.round(amount * 100),
-          product_data: {
-            name: productName,
-            description: productDescription,
-          },
-        },
-        quantity: 1,
-      },
-    ];
-
-    // Add convenience fee
-    if (isCard) {
-      const fee = Math.round(amount * CARD_FEE_PERCENT * 100);
-      lineItems.push({
-        price_data: {
-          currency: "usd",
-          unit_amount: fee,
-          product_data: {
-            name: "Card processing fee (3.5%)",
-            description: "Convenience fee for credit/debit card payment",
-          },
-        },
-        quantity: 1,
-      });
-    } else {
-      lineItems.push({
-        price_data: {
-          currency: "usd",
-          unit_amount: ACH_FEE_CENTS,
-          product_data: {
-            name: "ACH processing fee ($3.00)",
-            description: "Convenience fee for bank account payment",
-          },
-        },
-        quantity: 1,
-      });
-    }
-
-    metadata.paymentMethod = isCard ? "card" : "bank";
+    metadata.paymentMethod = "bank";
     metadata.baseAmount = String(amount);
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
-      payment_method_types: isCard ? ["card"] : ["us_bank_account"],
-      line_items: lineItems,
+      payment_method_types: ["us_bank_account"],
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            unit_amount: Math.round(amount * 100),
+            product_data: {
+              name: productName,
+              description: productDescription,
+            },
+          },
+          quantity: 1,
+        },
+        {
+          price_data: {
+            currency: "usd",
+            unit_amount: ACH_FEE_CENTS,
+            product_data: {
+              name: "Processing fee ($3.00)",
+              description: "Online payment processing fee",
+            },
+          },
+          quantity: 1,
+        },
+      ],
       metadata,
       customer_email: tenant.email || undefined,
       success_url: `${baseReturnUrl}/tenant/payments?payment=success&type=${type}`,
