@@ -125,7 +125,10 @@ export async function createLease(
         data: { tenantId, unitId, startDate, endDate, monthlyRent, leaseType, status, notes },
       });
       if (status === "ACTIVE") {
-        await tx.unit.update({ where: { id: unitId }, data: { occupancyStatus: "OCCUPIED" } });
+        await tx.unit.update({
+          where: { id: unitId },
+          data: { occupancyStatus: "OCCUPIED", isPublished: false },
+        });
       }
       return lease;
     });
@@ -134,6 +137,7 @@ export async function createLease(
     revalidatePath("/tenants");
     revalidatePath(`/tenants/${tenantId}`);
     revalidatePath("/units");
+    revalidatePath("/zillow-rentals");
     revalidatePath("/dashboard");
     redirect(flash(`/leases/${created.id}/edit`, "Lease created."));
   } catch (err) {
@@ -213,7 +217,10 @@ export async function updateLease(
       }
 
       if (status === "ACTIVE") {
-        await tx.unit.update({ where: { id: unitId }, data: { occupancyStatus: "OCCUPIED" } });
+        await tx.unit.update({
+          where: { id: unitId },
+          data: { occupancyStatus: "OCCUPIED", isPublished: false },
+        });
       } else if (prior.status === "ACTIVE") {
         // Lease left ACTIVE on the same unit — flip it to TURNOVER if no other active lease exists.
         const stillActive = await tx.lease.count({
@@ -230,6 +237,7 @@ export async function updateLease(
     revalidatePath("/tenants");
     revalidatePath(`/tenants/${tenantId}`);
     revalidatePath("/units");
+    revalidatePath("/zillow-rentals");
     revalidatePath("/dashboard");
     redirect(flash(`/leases/${id}/edit`, "Lease updated."));
   } catch (err) {
@@ -265,6 +273,7 @@ export async function endLease(formData: FormData) {
   revalidatePath(`/leases/${id}/edit`);
   revalidatePath("/tenants");
   revalidatePath("/units");
+  revalidatePath("/zillow-rentals");
   revalidatePath("/dashboard");
   redirect(flash(`/leases/${id}/edit`, "Lease ended."));
 }
@@ -292,6 +301,7 @@ export async function deleteLease(formData: FormData) {
   revalidatePath("/leases");
   revalidatePath("/tenants");
   revalidatePath("/units");
+  revalidatePath("/zillow-rentals");
   revalidatePath("/dashboard");
   redirect(flash("/leases", "Lease deleted."));
 }

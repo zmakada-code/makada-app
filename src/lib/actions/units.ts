@@ -84,6 +84,7 @@ export async function createUnit(
 
   revalidatePath(`/properties/${propertyId}`);
   revalidatePath("/units");
+  revalidatePath("/zillow-rentals");
   revalidatePath("/dashboard");
   redirect(flash(`/properties/${propertyId}`, "Unit created."));
 }
@@ -117,6 +118,9 @@ export async function updateUnit(
     };
   }
 
+  // Auto-unpublish if unit is no longer vacant
+  const autoUnpublish = occupancyStatus !== "VACANT" ? { isPublished: false } : {};
+
   const updated = await prisma.unit.update({
     where: { id },
     data: {
@@ -127,11 +131,13 @@ export async function updateUnit(
       depositAmount,
       occupancyStatus,
       notes,
+      ...autoUnpublish,
     },
   });
 
   revalidatePath("/units");
   revalidatePath(`/properties/${updated.propertyId}`);
+  revalidatePath("/zillow-rentals");
   revalidatePath("/dashboard");
   redirect(flash(`/properties/${updated.propertyId}`, "Unit updated."));
 }
@@ -164,6 +170,7 @@ export async function deleteUnit(formData: FormData) {
   await prisma.unit.delete({ where: { id } });
   revalidatePath("/units");
   revalidatePath(`/properties/${unit.propertyId}`);
+  revalidatePath("/zillow-rentals");
   revalidatePath("/dashboard");
   redirect(flash(`/properties/${unit.propertyId}`, "Unit deleted."));
 }
