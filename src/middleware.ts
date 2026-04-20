@@ -28,8 +28,10 @@ const PUBLIC_PATHS = [
   "/api/tenant",
   "/api/tenant-invite",
   "/api/webhooks",
+  "/api/stripe",
   "/api/inquiry",
   "/api/inquiries",
+  "/api/public",
   "/sign",
 ];
 
@@ -44,6 +46,12 @@ export async function middleware(req: NextRequest) {
 
   // Allow public paths through
   if (isPublicPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  // Allow requests with the intake secret header (tenant portal API calls)
+  // These endpoints verify the secret themselves.
+  if (req.headers.get("x-intake-secret")) {
     return NextResponse.next();
   }
 
