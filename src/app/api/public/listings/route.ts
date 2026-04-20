@@ -30,6 +30,19 @@ export async function GET() {
             60 * 60 * 24 // 24 hours
           );
         }
+        // Resolve listing photo URLs
+        let listingPhotoUrls: string[] = [];
+        if (unit.listingPhotos) {
+          try {
+            const paths: string[] = JSON.parse(unit.listingPhotos);
+            listingPhotoUrls = (
+              await Promise.all(
+                paths.map((p) => getSignedDocumentUrl(p, 60 * 60 * 24))
+              )
+            ).filter(Boolean) as string[];
+          } catch { /* ignore bad JSON */ }
+        }
+
         return {
           id: unit.id,
           propertyName: unit.property.name,
@@ -41,6 +54,8 @@ export async function GET() {
           depositAmount: unit.depositAmount,
           description: unit.publicDescription ?? "",
           propertyImageUrl,
+          zillowUrl: unit.zillowUrl ?? null,
+          listingPhotoUrls,
         };
       })
     );

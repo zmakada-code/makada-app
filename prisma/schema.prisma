@@ -130,6 +130,8 @@ model Unit {
 
   isPublished       Boolean @default(false)
   publicDescription String?
+  zillowUrl         String?  // Zillow rental listing URL for applications
+  listingPhotos     String?  // JSON array of Supabase storage paths for listing photos
 
   property     Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   leases       Lease[]

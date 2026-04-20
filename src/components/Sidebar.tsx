@@ -34,7 +34,7 @@ const PEOPLE_NAV = [
   { href: "/tenants", label: "Tenants", icon: Users },
   { href: "/leases", label: "Leases", icon: FileText },
   { href: "/leases/generate", label: "Generate Lease", icon: FilePlus },
-  { href: "/inquiries", label: "Inquiries", icon: Inbox },
+  { href: "/zillow-rentals", label: "Zillow Rentals", icon: Home },
 ];
 
 const MANAGE_NAV = [
