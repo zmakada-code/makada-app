@@ -3,6 +3,7 @@ import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 
 const CARD_FEE_PERCENT = 0.035; // 3.5% convenience fee for credit/debit card
+const ACH_FEE_CENTS = 300; // $3.00 ACH convenience fee
 
 /**
  * POST /api/tenant/pay-fee
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
       },
     ];
 
-    // Add convenience fee for card payments
+    // Add convenience fee
     if (isCard) {
       const fee = Math.round(amount * CARD_FEE_PERCENT * 100);
       lineItems.push({
@@ -129,6 +130,18 @@ export async function POST(req: NextRequest) {
           product_data: {
             name: "Card processing fee (3.5%)",
             description: "Convenience fee for credit/debit card payment",
+          },
+        },
+        quantity: 1,
+      });
+    } else {
+      lineItems.push({
+        price_data: {
+          currency: "usd",
+          unit_amount: ACH_FEE_CENTS,
+          product_data: {
+            name: "ACH processing fee ($3.00)",
+            description: "Convenience fee for bank account payment",
           },
         },
         quantity: 1,
