@@ -13,7 +13,7 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL =
-  process.env.EMAIL_FROM || "Makada Properties <onboarding@resend.dev>";
+  process.env.EMAIL_FROM || "Makada Properties <leases@mzancapital.com>";
 
 export type EmailOptions = {
   to: string;
@@ -82,7 +82,7 @@ export async function sendLeaseSigningEmail(
 ) {
   const portalUrl =
     signingUrl ||
-    `${process.env.TENANT_PORTAL_URL || "https://zmak-zmakada.replit.app"}/tenant/leases`;
+    `${process.env.TENANT_PORTAL_URL || "https://tenant.mzancapital.com"}/tenant/leases`;
 
   const subject = `Lease Ready for Signing — ${propertyName}, Unit ${unitLabel}`;
   const html = `
@@ -129,7 +129,7 @@ export async function sendLeaseSigningEmail(
     to: email,
     subject,
     html,
-    replyTo: "attysfnm@gmail.com",
+    replyTo: "management@mzancapital.com",
   });
 }
 
@@ -145,7 +145,7 @@ export async function sendLeaseSigningInvite(
   signingToken: string
 ) {
   const adminBase =
-    process.env.NEXT_PUBLIC_APP_URL || "https://makada-app.vercel.app";
+    process.env.NEXT_PUBLIC_APP_URL || "https://admin.mzancapital.com";
   const signingUrl = `${adminBase}/sign/${signingToken}`;
 
   const subject = `Sign Your Lease — ${propertyName}, Unit ${unitLabel}`;
@@ -196,6 +196,6 @@ export async function sendLeaseSigningInvite(
     to: email,
     subject,
     html,
-    replyTo: "attysfnm@gmail.com",
+    replyTo: "management@mzancapital.com",
   });
 }

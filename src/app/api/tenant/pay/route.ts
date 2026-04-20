@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const periodDate = new Date(Number(year), Number(month) - 1);
     const periodLabel = periodDate.toLocaleString("en-US", { month: "long", year: "numeric" });
 
-    const baseReturnUrl = returnUrl || "https://zmak-zmakada.replit.app";
+    const baseReturnUrl = returnUrl || "https://tenant.mzancapital.com";
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
