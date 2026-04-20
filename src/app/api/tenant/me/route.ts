@@ -30,13 +30,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Tenant not found." }, { status: 404 });
   }
 
-  // Get active lease with unit and property info
+  // Get active lease with unit, property, fees, deposits, and payment statuses
   const activeLease = await prisma.lease.findFirst({
     where: { tenantId: tenant.id, status: "ACTIVE" },
     include: {
       unit: {
         include: { property: true },
       },
+      fees: { orderBy: { createdAt: "desc" } },
+      paymentStatuses: { orderBy: { period: "desc" }, take: 12 },
     },
   });
 
@@ -113,6 +115,34 @@ export async function GET(request: Request) {
             name: activeLease.unit.property.name,
             address: activeLease.unit.property.address,
           },
+          // Security deposit info
+          deposit: {
+            required: Number(activeLease.depositAmount ?? activeLease.unit.depositAmount ?? 0),
+            status: activeLease.depositStatus,
+            paidAmount: activeLease.depositPaidAmount ? Number(activeLease.depositPaidAmount) : 0,
+            paidAt: activeLease.depositPaidAt?.toISOString() ?? null,
+          },
+          // Custom fees (pet fee, parking, etc.)
+          fees: activeLease.fees.map((f) => ({
+            id: f.id,
+            name: f.name,
+            amount: Number(f.amount),
+            isRecurring: f.isRecurring,
+            paidStatus: f.paidStatus,
+            paidAmount: f.paidAmount ? Number(f.paidAmount) : null,
+            dueDate: f.dueDate?.toISOString() ?? null,
+          })),
+          // Payment history with late fees
+          paymentHistory: activeLease.paymentStatuses.map((ps) => ({
+            period: ps.period,
+            status: ps.status,
+            amountPaid: ps.amountPaid ? Number(ps.amountPaid) : null,
+            method: ps.method,
+            paidAt: ps.paidAt?.toISOString() ?? null,
+            lateFeeAccrued: Number(ps.lateFeeAccrued),
+            lateFeePaid: Number(ps.lateFeePaid),
+            lateFeeWaived: ps.lateFeeWaived,
+          })),
         }
       : null,
     leases: leases.map((l) => ({

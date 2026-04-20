@@ -96,12 +96,13 @@ export function FeesSection({
               </select>
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">Due date (optional)</label>
+              <label className="block text-xs text-slate-500 mb-1">First due date</label>
               <input
                 type="date"
                 name="dueDate"
                 className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm"
               />
+              <p className="text-[10px] text-slate-400 mt-0.5">For recurring: when the 1st charge is due (charged monthly on the 1st after).</p>
             </div>
           </div>
           <div>
