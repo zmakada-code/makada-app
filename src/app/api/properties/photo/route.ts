@@ -42,6 +42,25 @@ export async function POST(request: Request) {
     const storagePath = `property/${propertyId}/${crypto.randomUUID()}-${safeName}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    // Ensure the bucket exists (auto-create if missing)
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some((b: any) => b.name === BUCKET);
+    if (!bucketExists) {
+      console.log(`[property-photo] Creating storage bucket "${BUCKET}"...`);
+      const { error: createError } = await supabase.storage.createBucket(BUCKET, {
+        public: false,
+        fileSizeLimit: 50 * 1024 * 1024, // 50MB
+      });
+      if (createError && !createError.message?.includes("already exists")) {
+        console.error("[property-photo] bucket create error:", createError);
+        return NextResponse.json(
+          { error: `Storage bucket error: ${createError.message}` },
+          { status: 500 }
+        );
+      }
+    }
+
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
       .upload(storagePath, buffer, {
@@ -52,7 +71,7 @@ export async function POST(request: Request) {
     if (uploadError) {
       console.error("[property-photo] upload error:", uploadError);
       return NextResponse.json(
-        { error: "Failed to upload image" },
+        { error: `Upload failed: ${uploadError.message}` },
         { status: 500 }
       );
     }

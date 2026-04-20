@@ -37,10 +37,16 @@ export function PropertyPhotoUpload({
         body: fd,
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Server returned ${res.status} — check Supabase config`);
+      }
+      if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
 
-      setImageUrl(data.imageUrl);
+      // Use the signed URL from the response, or fall back to storagePath
+      setImageUrl(data.imageUrl || data.storagePath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {

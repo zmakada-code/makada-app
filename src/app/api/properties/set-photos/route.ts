@@ -16,6 +16,7 @@ const PHOTO_MAP: Record<string, string> = {
   "Lakeview Way": "/property-photos/303 Lakeview Way.jpg",
   "500 N San Mateo": "/property-photos/500 N San Mateo.png",
   "1110 Haddon Drive": "/property-photos/Haddon.jpg",
+  "Montgomery": "/property-photos/Mongtomery.png",
 };
 
 export async function POST() {
