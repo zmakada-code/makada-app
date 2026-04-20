@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Get payments
+      // Get rent payments
       const payments = await prisma.paymentStatus.findMany({
         where: {
           period: month,
@@ -72,6 +72,41 @@ export async function POST(req: NextRequest) {
         orderBy: { createdAt: "asc" },
       });
 
+      // Get late fees collected
+      const lateFeePayments = await prisma.paymentStatus.findMany({
+        where: {
+          period: month,
+          lateFeePaid: { gt: 0 },
+          lease: { unit: { propertyId: property.id } },
+        },
+        include: {
+          lease: { include: { tenant: { select: { fullName: true } }, unit: { select: { label: true } } } },
+        },
+      });
+
+      // Get paid fees during this period
+      const paidFees = await prisma.fee.findMany({
+        where: {
+          paidStatus: "PAID",
+          paidAt: { gte: startDate, lte: endDate },
+          lease: { unit: { propertyId: property.id } },
+        },
+        include: {
+          lease: { include: { tenant: { select: { fullName: true } }, unit: { select: { label: true } } } },
+        },
+        orderBy: { paidAt: "asc" },
+      });
+
+      // Get deposit payments during this period
+      const depositPayments = await prisma.lease.findMany({
+        where: {
+          unit: { propertyId: property.id },
+          depositStatus: { in: ["PAID", "PARTIAL"] },
+          depositPaidAt: { gte: startDate, lte: endDate },
+        },
+        include: { tenant: { select: { fullName: true } }, unit: { select: { label: true } } },
+      });
+
       // Get expenses
       const expenses = await prisma.expense.findMany({
         where: {
@@ -82,14 +117,16 @@ export async function POST(req: NextRequest) {
         orderBy: { date: "asc" },
       });
 
-      const totalIncome = payments.reduce((sum, p) => {
-        return sum + (p.amountPaid ? Number(p.amountPaid) : Number(p.lease.unit.rentAmount));
-      }, 0);
+      const rentIncome = payments.reduce((sum, p) => sum + (p.amountPaid ? Number(p.amountPaid) : Number(p.lease.unit.rentAmount)), 0);
+      const lateFeeIncome = lateFeePayments.reduce((sum, p) => sum + Number(p.lateFeePaid), 0);
+      const feeIncome = paidFees.reduce((sum, f) => sum + (f.paidAmount ? Number(f.paidAmount) : Number(f.amount)), 0);
+      const depositIncome = depositPayments.reduce((sum, l) => sum + (l.depositPaidAmount ? Number(l.depositPaidAmount) : 0), 0);
+      const totalIncome = rentIncome + lateFeeIncome + feeIncome + depositIncome;
       const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
       const netIncome = totalIncome - totalExpenses;
 
       // Generate PDF
-      const pdfBytes = await generateStatementPdf(property, payments, expenses, totalIncome, totalExpenses, netIncome, periodLabel, month);
+      const pdfBytes = await generateStatementPdf(property, payments, lateFeePayments, paidFees, depositPayments, expenses, totalIncome, totalExpenses, netIncome, periodLabel, month);
 
       // Upload to Supabase
       const supabase = createSupabaseAdminClient();
@@ -135,7 +172,7 @@ export async function POST(req: NextRequest) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function generateStatementPdf(property: any, payments: any[], expenses: any[], totalIncome: number, totalExpenses: number, netIncome: number, periodLabel: string, month: string): Promise<Uint8Array> {
+async function generateStatementPdf(property: any, payments: any[], lateFeePayments: any[], paidFees: any[], depositPayments: any[], expenses: any[], totalIncome: number, totalExpenses: number, netIncome: number, periodLabel: string, month: string): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   let page = pdf.addPage([612, 792]);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -212,21 +249,36 @@ async function generateStatementPdf(property: any, payments: any[], expenses: an
   page.drawText("Amount", { x: 510, y: y + 2, font: fontBold, size: 8, color: muted });
   y -= 18;
 
-  if (payments.length === 0) {
-    page.drawText("No rent income recorded.", { x: leftMargin + 5, y, font, size: 9, color: muted });
+  const allIncomeItems: { date: string; tenant: string; unit: string; description: string; amount: number }[] = [];
+
+  for (const p of payments) {
+    const amt = p.amountPaid ? Number(p.amountPaid) : Number(p.lease.unit.rentAmount);
+    const dateStr = p.paidAt ? new Date(p.paidAt).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) : "—";
+    allIncomeItems.push({ date: dateStr, tenant: p.lease.tenant.fullName, unit: p.lease.unit.label, description: "Rent", amount: amt });
+  }
+  for (const p of lateFeePayments) {
+    allIncomeItems.push({ date: "—", tenant: p.lease.tenant.fullName, unit: p.lease.unit.label, description: "Late fee", amount: Number(p.lateFeePaid) });
+  }
+  for (const f of paidFees) {
+    const dateStr = f.paidAt ? new Date(f.paidAt).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) : "—";
+    allIncomeItems.push({ date: dateStr, tenant: f.lease.tenant.fullName, unit: f.lease.unit.label, description: f.name, amount: f.paidAmount ? Number(f.paidAmount) : Number(f.amount) });
+  }
+  for (const l of depositPayments) {
+    const dateStr = l.depositPaidAt ? new Date(l.depositPaidAt).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) : "—";
+    allIncomeItems.push({ date: dateStr, tenant: l.tenant.fullName, unit: l.unit.label, description: "Security deposit", amount: l.depositPaidAmount ? Number(l.depositPaidAmount) : 0 });
+  }
+
+  if (allIncomeItems.length === 0) {
+    page.drawText("No income recorded.", { x: leftMargin + 5, y, font, size: 9, color: muted });
     y -= 16;
   } else {
-    for (const p of payments) {
+    for (const item of allIncomeItems) {
       checkNewPage();
-      const amt = p.amountPaid ? Number(p.amountPaid) : Number(p.lease.unit.rentAmount);
-      const dateStr = p.paidAt ? new Date(p.paidAt).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) : "—";
-      const method = p.method === "ONLINE" ? "Stripe" : p.method === "CHECK" ? "Check" : p.method === "CASH" ? "Cash" : p.method || "—";
-
-      page.drawText(dateStr, { x: leftMargin + 5, y, font, size: 9, color: dark });
-      page.drawText(p.lease.tenant.fullName, { x: 130, y, font, size: 9, color: dark });
-      page.drawText(p.lease.unit.label, { x: 300, y, font, size: 9, color: dark });
-      page.drawText(method, { x: 370, y, font, size: 9, color: dark });
-      drawMoney(amt, 510, y);
+      page.drawText(item.date, { x: leftMargin + 5, y, font, size: 9, color: dark });
+      page.drawText(item.tenant, { x: 130, y, font, size: 9, color: dark });
+      page.drawText(item.unit, { x: 300, y, font, size: 9, color: dark });
+      page.drawText(item.description.length > 20 ? item.description.slice(0, 20) + "…" : item.description, { x: 370, y, font, size: 9, color: dark });
+      drawMoney(item.amount, 510, y);
       y -= 16;
     }
   }

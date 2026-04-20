@@ -180,12 +180,27 @@ model Lease {
   sentForSigningAt     DateTime?
   signedAt             DateTime?
 
+  // Security deposit tracking
+  depositAmount          Decimal?       @db.Decimal(10, 2) // overrides unit default if set
+  depositStatus          String         @default("PENDING") // PENDING, PAID, PARTIAL, REFUNDED
+  depositPaidAmount      Decimal?       @db.Decimal(10, 2)
+  depositPaidAt          DateTime?
+  depositPaymentMethod   String?        // ONLINE, CHECK, CASH, OTHER
+  depositStripeSessionId String?
+  depositNote            String?
+
+  // Late fee settings (defaults: $10/day, due on 1st, no grace period)
+  lateFeePerDay    Decimal  @default(10) @db.Decimal(10, 2)
+  rentDueDay       Int      @default(1)  // day of month rent is due
+  gracePeriodDays  Int      @default(0)  // 0 = no grace period
+
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
   unit            Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
   tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   paymentStatuses PaymentStatus[]
+  fees            Fee[]
 
   @@index([unitId])
   @@index([tenantId])
@@ -202,6 +217,12 @@ model PaymentStatus {
   stripeSessionId String?       // Stripe checkout session ID
   paidAt          DateTime?
   note            String?
+
+  // Late fee tracking for this period
+  lateFeeAccrued  Decimal       @default(0) @db.Decimal(10, 2)  // total late fee for this period
+  lateFeePaid     Decimal       @default(0) @db.Decimal(10, 2)  // how much of the late fee has been paid
+  lateFeeWaived   Boolean       @default(false)                  // admin can waive late fees
+
   updatedAt       DateTime      @updatedAt
   createdAt       DateTime      @default(now())
 
@@ -209,6 +230,29 @@ model PaymentStatus {
 
   @@unique([leaseId, period])
   @@index([leaseId])
+}
+
+// Custom fees attached to a lease (pet fee, parking, cleaning, etc.)
+model Fee {
+  id            String    @id @default(cuid())
+  leaseId       String
+  name          String    // "Pet Fee", "Parking", "Cleaning Fee", etc.
+  amount        Decimal   @db.Decimal(10, 2)
+  isRecurring   Boolean   @default(false)  // true = charges monthly, false = one-time
+  dueDate       DateTime? // for one-time fees: when it's due
+  paidStatus    String    @default("UNPAID") // UNPAID, PAID, PARTIAL, WAIVED
+  paidAmount    Decimal?  @db.Decimal(10, 2)
+  paidAt        DateTime?
+  paymentMethod String?   // ONLINE, CHECK, CASH, OTHER
+  stripeSessionId String?
+  note          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  lease Lease @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+
+  @@index([leaseId])
+  @@index([paidStatus])
 }
 
 model MaintenanceTicket {

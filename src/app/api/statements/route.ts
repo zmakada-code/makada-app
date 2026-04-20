@@ -49,6 +49,54 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "asc" },
   });
 
+  // Get late fees collected for this period
+  const lateFeePayments = await prisma.paymentStatus.findMany({
+    where: {
+      period: month,
+      lateFeePaid: { gt: 0 },
+      lease: { unit: { propertyId } },
+    },
+    include: {
+      lease: {
+        include: {
+          tenant: { select: { fullName: true } },
+          unit: { select: { label: true } },
+        },
+      },
+    },
+  });
+
+  // Get paid fees for leases on this property during this period
+  const paidFees = await prisma.fee.findMany({
+    where: {
+      paidStatus: "PAID",
+      paidAt: { gte: startDate, lte: endDate },
+      lease: { unit: { propertyId } },
+    },
+    include: {
+      lease: {
+        include: {
+          tenant: { select: { fullName: true } },
+          unit: { select: { label: true } },
+        },
+      },
+    },
+    orderBy: { paidAt: "asc" },
+  });
+
+  // Get deposit payments recorded during this period
+  const depositPayments = await prisma.lease.findMany({
+    where: {
+      unit: { propertyId },
+      depositStatus: { in: ["PAID", "PARTIAL"] },
+      depositPaidAt: { gte: startDate, lte: endDate },
+    },
+    include: {
+      tenant: { select: { fullName: true } },
+      unit: { select: { label: true } },
+    },
+  });
+
   // Get expenses for this period
   const expenses = await prisma.expense.findMany({
     where: {
@@ -62,11 +110,15 @@ export async function GET(req: NextRequest) {
   });
 
   // Totals
-  const totalIncome = payments.reduce((sum, p) => {
+  const rentIncome = payments.reduce((sum, p) => {
     const amt = p.amountPaid ? Number(p.amountPaid) : Number(p.lease.unit.rentAmount);
     return sum + amt;
   }, 0);
+  const lateFeeIncome = lateFeePayments.reduce((sum, p) => sum + Number(p.lateFeePaid), 0);
+  const feeIncome = paidFees.reduce((sum, f) => sum + (f.paidAmount ? Number(f.paidAmount) : Number(f.amount)), 0);
+  const depositIncome = depositPayments.reduce((sum, l) => sum + (l.depositPaidAmount ? Number(l.depositPaidAmount) : 0), 0);
 
+  const totalIncome = rentIncome + lateFeeIncome + feeIncome + depositIncome;
   const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const netIncome = totalIncome - totalExpenses;
 
@@ -137,20 +189,43 @@ export async function GET(req: NextRequest) {
   page.drawText("Amount", { x: 510, y: y + 2, font: fontBold, size: 8, color: muted });
   y -= 18;
 
-  if (payments.length === 0) {
-    page.drawText("No rent income recorded for this period.", { x: leftMargin + 5, y, font, size: 9, color: muted });
+  const allIncomeItems: { date: string; tenant: string; unit: string; description: string; amount: number }[] = [];
+
+  // Rent payments
+  for (const p of payments) {
+    const amt = p.amountPaid ? Number(p.amountPaid) : Number(p.lease.unit.rentAmount);
+    const dateStr = p.paidAt ? new Date(p.paidAt).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) : "—";
+    allIncomeItems.push({ date: dateStr, tenant: p.lease.tenant.fullName, unit: p.lease.unit.label, description: "Rent", amount: amt });
+  }
+
+  // Late fees collected
+  for (const p of lateFeePayments) {
+    allIncomeItems.push({ date: "—", tenant: p.lease.tenant.fullName, unit: p.lease.unit.label, description: "Late fee", amount: Number(p.lateFeePaid) });
+  }
+
+  // Custom fees paid
+  for (const f of paidFees) {
+    const dateStr = f.paidAt ? new Date(f.paidAt).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) : "—";
+    allIncomeItems.push({ date: dateStr, tenant: f.lease.tenant.fullName, unit: f.lease.unit.label, description: f.name, amount: f.paidAmount ? Number(f.paidAmount) : Number(f.amount) });
+  }
+
+  // Security deposits
+  for (const l of depositPayments) {
+    const dateStr = l.depositPaidAt ? new Date(l.depositPaidAt).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) : "—";
+    allIncomeItems.push({ date: dateStr, tenant: l.tenant.fullName, unit: l.unit.label, description: "Security deposit", amount: l.depositPaidAmount ? Number(l.depositPaidAmount) : 0 });
+  }
+
+  if (allIncomeItems.length === 0) {
+    page.drawText("No income recorded for this period.", { x: leftMargin + 5, y, font, size: 9, color: muted });
     y -= 16;
   } else {
-    for (const p of payments) {
+    for (const item of allIncomeItems) {
       checkNewPage();
-      const amt = p.amountPaid ? Number(p.amountPaid) : Number(p.lease.unit.rentAmount);
-      const dateStr = p.paidAt ? new Date(p.paidAt).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) : "—";
-
-      page.drawText(dateStr, { x: leftMargin + 5, y, font, size: 9, color: dark });
-      page.drawText(p.lease.tenant.fullName, { x: 130, y, font, size: 9, color: dark });
-      page.drawText(p.lease.unit.label, { x: 300, y, font, size: 9, color: dark });
-      page.drawText("Rent", { x: 360, y, font, size: 9, color: dark });
-      drawMoney(amt, 510, y);
+      page.drawText(item.date, { x: leftMargin + 5, y, font, size: 9, color: dark });
+      page.drawText(item.tenant, { x: 130, y, font, size: 9, color: dark });
+      page.drawText(item.unit, { x: 300, y, font, size: 9, color: dark });
+      page.drawText(item.description.length > 20 ? item.description.slice(0, 20) + "…" : item.description, { x: 360, y, font, size: 9, color: dark });
+      drawMoney(item.amount, 510, y);
       y -= 16;
     }
   }

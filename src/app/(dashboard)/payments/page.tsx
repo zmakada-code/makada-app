@@ -197,6 +197,7 @@ export default async function PaymentsPage({
                 <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Property / Unit</th>
                 <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Period</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Rent</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Late Fee</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Method</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Status</th>
                 <th className="text-center px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wide">Receipt</th>
@@ -223,6 +224,15 @@ export default async function PaymentsPage({
                   <td className="px-4 py-3 text-slate-500">{formatPeriod(p.period)}</td>
                   <td className="px-4 py-3 text-right font-medium text-slate-900">
                     {p.lease.unit.rentAmount ? money(p.lease.unit.rentAmount) : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {Number(p.lateFeeAccrued) > 0 ? (
+                      <span className="text-xs font-semibold text-amber-700">
+                        +${Number(p.lateFeeAccrued).toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-300">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {p.method ? (
