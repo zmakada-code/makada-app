@@ -75,7 +75,7 @@ export default function LoginPage() {
             <Lock className="h-8 w-8" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">
-            Makada Properties
+            MZAN Capital
           </h1>
           <p className="text-slate-500 mt-1 text-sm">
             Admin Portal
@@ -217,7 +217,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          Makada Properties &middot; Private admin portal
+          MZAN Capital &middot; Private admin portal
         </p>
       </div>
     </div>

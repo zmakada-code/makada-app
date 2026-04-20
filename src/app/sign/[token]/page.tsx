@@ -206,7 +206,7 @@ export default function PublicSigningPage() {
           </div>
           <h1 className="text-2xl font-semibold text-slate-900 mb-2">Lease Signed!</h1>
           <p className="text-slate-600 mb-6">
-            Your lease has been signed and submitted to Makada Properties.
+            Your lease has been signed and submitted to MZAN Capital.
             You'll receive a copy of the signed lease and login credentials for the tenant portal shortly.
           </p>
           <div className="bg-slate-50 rounded-lg p-4 text-sm text-slate-600">
@@ -224,7 +224,7 @@ export default function PublicSigningPage() {
       <header className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-slate-900">Makada Properties</h1>
+            <h1 className="text-lg font-semibold text-slate-900">MZAN Capital</h1>
             <p className="text-xs text-slate-500">Lease Signing</p>
           </div>
           <div className="text-right text-sm">

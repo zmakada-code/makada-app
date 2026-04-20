@@ -42,7 +42,7 @@ export async function GET(
 
     // Check if token is expired
     if (new Date(row.expiresAt) < new Date()) {
-      return NextResponse.json({ error: "This signing link has expired. Please contact Makada Properties for a new one." }, { status: 410 });
+      return NextResponse.json({ error: "This signing link has expired. Please contact MZAN Capital for a new one." }, { status: 410 });
     }
 
     // Check if already used

@@ -13,7 +13,7 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL =
-  process.env.EMAIL_FROM || "Makada Properties <leases@mzancapital.com>";
+  process.env.EMAIL_FROM || "MZAN Capital <management@mzancapital.com>";
 
 export type EmailOptions = {
   to: string;
@@ -88,8 +88,8 @@ export async function sendLeaseSigningEmail(
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="text-align: center; margin-bottom: 32px;">
-        <h1 style="color: #1e293b; font-size: 24px; margin: 0;">Makada Properties</h1>
-        <p style="color: #64748b; font-size: 13px; margin-top: 4px;">303 Lakeview Way, Emerald Hills, CA 94062</p>
+        <h1 style="color: #1e293b; font-size: 24px; margin: 0;">MZAN Capital</h1>
+        <p style="color: #64748b; font-size: 13px; margin-top: 4px;">500 Airport Blvd, Suite 500, Burlingame, CA 94010</p>
       </div>
 
       <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 32px;">
@@ -109,17 +109,17 @@ export async function sendLeaseSigningEmail(
         </div>
 
         <p style="color: #94a3b8; font-size: 13px; line-height: 1.5; margin: 0;">
-          This link will take you to the Makada Properties tenant portal where you can
+          This link will take you to the MZAN Capital tenant portal where you can
           view the complete lease document, add your signature and initials, and submit.
         </p>
       </div>
 
       <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center;">
         <p style="color: #94a3b8; font-size: 12px; margin: 0;">
-          If you have questions, reply to this email or contact Makada Properties directly.
+          If you have questions, reply to this email or contact MZAN Capital directly.
         </p>
         <p style="color: #cbd5e1; font-size: 11px; margin-top: 8px;">
-          Makada Properties · 303 Lakeview Way, Emerald Hills, CA 94062
+          MZAN Capital · 500 Airport Blvd, Suite 500, Burlingame, CA 94010
         </p>
       </div>
     </div>
@@ -152,12 +152,12 @@ export async function sendLeaseSigningInvite(
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="text-align: center; margin-bottom: 32px;">
-        <h1 style="color: #1e293b; font-size: 24px; margin: 0;">Makada Properties</h1>
-        <p style="color: #64748b; font-size: 13px; margin-top: 4px;">303 Lakeview Way, Emerald Hills, CA 94062</p>
+        <h1 style="color: #1e293b; font-size: 24px; margin: 0;">MZAN Capital</h1>
+        <p style="color: #64748b; font-size: 13px; margin-top: 4px;">500 Airport Blvd, Suite 500, Burlingame, CA 94010</p>
       </div>
 
       <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 32px;">
-        <h2 style="color: #1e293b; font-size: 20px; margin: 0 0 16px;">Welcome to Makada Properties</h2>
+        <h2 style="color: #1e293b; font-size: 20px; margin: 0 0 16px;">Welcome to MZAN Capital</h2>
         <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 12px;">
           Hi ${tenantName},
         </p>
@@ -175,7 +175,7 @@ export async function sendLeaseSigningInvite(
         <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin-top: 24px;">
           <p style="color: #92400e; font-size: 13px; line-height: 1.5; margin: 0;">
             <strong>Note:</strong> This link is unique to you and expires in 7 days.
-            After signing, you'll receive login credentials for the Makada Properties
+            After signing, you'll receive login credentials for the MZAN Capital
             tenant portal where you can view your lease, pay rent, and submit maintenance requests.
           </p>
         </div>
@@ -183,10 +183,10 @@ export async function sendLeaseSigningInvite(
 
       <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center;">
         <p style="color: #94a3b8; font-size: 12px; margin: 0;">
-          If you have questions, reply to this email or contact Makada Properties directly.
+          If you have questions, reply to this email or contact MZAN Capital directly.
         </p>
         <p style="color: #cbd5e1; font-size: 11px; margin-top: 8px;">
-          Makada Properties · 303 Lakeview Way, Emerald Hills, CA 94062
+          MZAN Capital · 500 Airport Blvd, Suite 500, Burlingame, CA 94010
         </p>
       </div>
     </div>

@@ -2,7 +2,7 @@
  * Lease PDF Generator
  *
  * Generates a professional multi-page California Residential Lease Agreement
- * as a PDF using pdf-lib, faithfully matching the original Makada Properties
+ * as a PDF using pdf-lib, faithfully matching the original MZAN Capital
  * lease template (58 sections + addendums).
  *
  * Returns both the PDF buffer and metadata about signing field locations
@@ -449,7 +449,7 @@ class PdfWriter {
     });
     this.y -= 14;
 
-    this.currentPage.drawText("Makada Properties", {
+    this.currentPage.drawText("MZAN Capital", {
       x: MARGIN_L,
       y: this.y,
       font: this.fontBold,
@@ -488,15 +488,15 @@ class PdfWriter {
 
 /**
  * Generate the full California Residential Lease Agreement as a PDF,
- * matching the original Makada Properties lease template.
+ * matching the original MZAN Capital lease template.
  */
 export async function generateLeasePdf(
   input: LeaseInput,
   embedLandlordSig = true
 ): Promise<LeaseGenerationResult> {
   const pdf = await PDFDocument.create();
-  pdf.setTitle("Residential Lease Agreement — Makada Properties");
-  pdf.setAuthor("Makada Properties");
+  pdf.setTitle("Residential Lease Agreement — MZAN Capital");
+  pdf.setAuthor("MZAN Capital");
 
   const writer = new PdfWriter(pdf);
   await writer.init();
@@ -543,7 +543,7 @@ export async function generateLeasePdf(
   // PREAMBLE
   // ================================================================
   writer.drawParagraph(
-    `This Lease Agreement (the "Agreement") is made and entered on ${today} (the "Effective Date") by and between Makada Properties (the "Landlord") and the following tenants:`
+    `This Lease Agreement (the "Agreement") is made and entered on ${today} (the "Effective Date") by and between MZAN Capital (the "Landlord") and the following tenants:`
   );
   writer.drawBoldLine(`Tenant 1: ${input.TENANT_1_NAME}`);
   if (!isSingleTenant) {
@@ -587,7 +587,7 @@ export async function generateLeasePdf(
   writer.drawTextLine(`Cash`, 9.5, 16);
   writer.drawTextLine(`Money Order`, 9.5, 16);
   writer.drawTextLine(`Cashier's Check`, 9.5, 16);
-  writer.drawTextLine(`Makada Properties Website`, 9.5, 16);
+  writer.drawTextLine(`MZAN Capital Website`, 9.5, 16);
   writer.drawParagraph(
     `If any payment is returned for non-sufficient funds or because Tenant stops payments, then, after that, (i) Landlord may, in writing, require Tenant to pay Rent in cash for three months and (ii) all future Rent must be made by certified funds.`
   );
@@ -658,7 +658,7 @@ export async function generateLeasePdf(
   // ================================================================
   writer.drawSectionHeader(`8. MANAGEMENT.`);
   writer.drawParagraph(
-    `The Tenant is hereby notified that Makada Properties is the property manager in charge of the Property. Should the tenant have any issues or concerns the Tenant may contact Makada Properties at 533 Airport Blvd., Suite 500, Burlingame, California 94010.`
+    `The Tenant is hereby notified that MZAN Capital is the property manager in charge of the Property. Should the tenant have any issues or concerns the Tenant may contact MZAN Capital at 500 Airport Blvd, Suite 500, Burlingame, CA 94010.`
   );
 
   // ================================================================
@@ -988,9 +988,9 @@ export async function generateLeasePdf(
   );
   writer.drawSpace(4);
   writer.drawBoldLine(`LANDLORD:`);
-  writer.drawTextLine(`Makada Properties`);
-  writer.drawTextLine(`533 Airport Blvd., Suite 500`);
-  writer.drawTextLine(`Burlingame, California 94010`);
+  writer.drawTextLine(`MZAN Capital`);
+  writer.drawTextLine(`500 Airport Blvd, Suite 500`);
+  writer.drawTextLine(`Burlingame, CA 94010`);
   writer.drawSpace(4);
   writer.drawBoldLine(`TENANT:`);
   writer.drawTextLine(`Tenant 1: ${input.TENANT_1_NAME}`);
@@ -1201,7 +1201,7 @@ export async function generateLeasePdf(
 
   // Lead paint signatures
   writer.drawSpace(4);
-  writer.drawTextLine(`Acknowledged by Landlord: Makada Properties`);
+  writer.drawTextLine(`Acknowledged by Landlord: MZAN Capital`);
   writer.drawSpace(4);
 
   // ================================================================
@@ -1320,7 +1320,7 @@ export async function generateLeasePdf(
   // ================================================================
   writer.drawSpace(12);
   writer.drawParagraph(
-    `This lease was generated electronically by Makada Properties. Electronic signatures are legally binding under the Uniform Electronic Transactions Act (UETA) and the federal ESIGN Act.`,
+    `This lease was generated electronically by MZAN Capital. Electronic signatures are legally binding under the Uniform Electronic Transactions Act (UETA) and the federal ESIGN Act.`,
     8
   );
 

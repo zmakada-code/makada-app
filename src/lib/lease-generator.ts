@@ -129,7 +129,7 @@ async function addImageToDocx(
 
 /**
  * Embed a signature image at the landlord "By:" lines in the document.
- * Replaces "By: ___________________________________ Makada Properties" with the signature image + "Makada Properties"
+ * Replaces "By: ___________________________________ MZAN Capital" with the signature image + "MZAN Capital"
  */
 function embedLandlordSignature(xml: string, rId: string): string {
   // Signature image: ~2 inches wide, ~0.5 inches tall
@@ -138,17 +138,17 @@ function embedLandlordSignature(xml: string, rId: string): string {
   const imageXml = buildInlineImageXml(rId, cx, cy, "LandlordSignature");
 
   // Replace the underscore signature lines for landlord
-  // Pattern: "By: ___________________________________ Makada Properties"
-  // We want to keep "By: " + add signature image + " Makada Properties"
+  // Pattern: "By: ___________________________________ MZAN Capital"
+  // We want to keep "By: " + add signature image + " MZAN Capital"
   // The text is in <w:t> elements. We replace the underscore text with the image.
   xml = xml.replace(
-    /(<w:t[^>]*>)(By: _{10,} Makada Properties\s*?)(<\/w:t>)/g,
+    /(<w:t[^>]*>)(By: _{10,} MZAN Capital\s*?)(<\/w:t>)/g,
     (_match, openTag, _text, closeTag) => {
-      // Replace with: "By: " then close text, add drawing, then "Makada Properties"
+      // Replace with: "By: " then close text, add drawing, then "MZAN Capital"
       return (
         `${openTag}By: ${closeTag}</w:r>` +
         `<w:r><w:rPr></w:rPr>${imageXml}</w:r>` +
-        `<w:r><w:rPr></w:rPr><w:t xml:space="preserve"> Makada Properties</w:t></w:r>` +
+        `<w:r><w:rPr></w:rPr><w:t xml:space="preserve"> MZAN Capital</w:t></w:r>` +
         `<w:r><w:rPr></w:rPr><w:t xml:space="preserve">`  // dummy to close the original structure
       );
     }
@@ -166,7 +166,7 @@ function embedTenantSignature(xml: string, rId: string): string {
   const cy = 457200;  // 0.5 inches
   const imageXml = buildInlineImageXml(rId, cx, cy, "TenantSignature");
 
-  // Find tenant "By:" lines (those NOT followed by "Makada Properties")
+  // Find tenant "By:" lines (those NOT followed by "MZAN Capital")
   // These are standalone "By: ___________________________________" lines
   xml = xml.replace(
     /(<w:t[^>]*>)(By: _{10,})(<\/w:t>)/g,
@@ -255,7 +255,7 @@ export async function generateLease(
     // Embed signatures in document.xml
     if (filename.includes("document.xml")) {
       // Landlord signature must be embedded BEFORE tenant signature
-      // because the landlord regex is more specific (includes "Makada Properties")
+      // because the landlord regex is more specific (includes "MZAN Capital")
       if (landlordSigRId) {
         content = embedLandlordSignature(content, landlordSigRId);
       }

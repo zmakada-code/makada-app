@@ -40,12 +40,12 @@ export async function POST(request: Request) {
     try {
       await sendEmail({
         to: ADMIN_EMAIL,
-        subject: `Makada Properties — Login Code: ${code}`,
+        subject: `MZAN Capital — Login Code: ${code}`,
         html: `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 20px;">
             <h2 style="color: #1e293b; margin: 0 0 16px;">Login Verification</h2>
             <p style="color: #475569; font-size: 15px; margin: 0 0 24px;">
-              Your verification code for Makada Properties admin:
+              Your verification code for MZAN Capital admin:
             </p>
             <div style="background: #f1f5f9; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
               <span style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #1e293b;">${code}</span>

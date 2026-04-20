@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Makada Properties",
-  description: "Internal operating tool for Makada Properties.",
+  title: "MZAN Capital",
+  description: "Internal operating tool for MZAN Capital.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

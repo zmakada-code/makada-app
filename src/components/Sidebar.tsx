@@ -95,7 +95,7 @@ export function Sidebar() {
             <Home className="h-4 w-4 text-indigo-300" />
           </div>
           <div>
-            <div className="text-sm font-bold text-white tracking-tight">Makada</div>
+            <div className="text-sm font-bold text-white tracking-tight">MZAN</div>
             <div className="text-[10px] text-indigo-300/50 font-medium">Properties</div>
           </div>
         </div>
@@ -110,7 +110,7 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="px-4 py-3 text-[10px] text-indigo-300/30 border-t border-white/5">
-        Makada Properties v0.1
+        MZAN Capital v0.1
       </div>
     </aside>
   );

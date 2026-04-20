@@ -337,7 +337,7 @@ export async function appendSigningPage(
   });
   y -= 30;
 
-  page.drawText("Makada Properties LLC", {
+  page.drawText("MZAN Capital LLC", {
     x: MARGIN_L,
     y: y - 11,
     size: 11,

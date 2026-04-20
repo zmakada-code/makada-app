@@ -11,7 +11,7 @@ export default function SettingsPage() {
       <div className="card p-5 max-w-md">
         <div className="text-sm font-medium mb-2">About</div>
         <p className="text-sm text-slate-600">
-          Makada Properties — internal property management tool.
+          MZAN Capital — internal property management tool.
         </p>
       </div>
     </div>
