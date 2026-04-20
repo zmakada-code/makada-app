@@ -1,9 +1,18 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { GlobalSearch } from "@/components/GlobalSearch";
-import { Bell } from "lucide-react";
+import { Bell, LogOut } from "lucide-react";
 
 export function TopBar() {
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
   return (
     <header className="h-14 border-b border-slate-200/80 bg-white/80 backdrop-blur-sm flex items-center px-6 gap-4 sticky top-0 z-10">
       <GlobalSearch />
@@ -18,6 +27,14 @@ export function TopBar() {
         <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-[11px] font-bold text-white">
           NM
         </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+          title="Sign out"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
       </div>
     </header>
   );
