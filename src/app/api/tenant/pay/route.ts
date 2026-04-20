@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card"],
+      payment_method_types: ["card", "us_bank_account"],
       line_items: [
         {
           price_data: {
