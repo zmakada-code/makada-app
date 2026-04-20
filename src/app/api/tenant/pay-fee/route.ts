@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 
+const CARD_FEE_PERCENT = 0.035; // 3.5% convenience fee for credit/debit card
+
 /**
  * POST /api/tenant/pay-fee
  * Creates a Stripe Checkout Session for a tenant to pay a custom fee or security deposit.
  * Called from the tenant portal with x-intake-secret header.
- * Body: { authUserId: string, type: "fee" | "deposit", feeId?: string, returnUrl?: string }
+ * Body: { authUserId: string, type: "fee" | "deposit", feeId?: string, paymentMethod?: "card" | "bank", returnUrl?: string }
  */
 export async function POST(req: NextRequest) {
   const secret = req.headers.get("x-intake-secret");
@@ -15,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { authUserId, type, feeId, returnUrl } = await req.json();
+    const { authUserId, type, feeId, returnUrl, paymentMethod } = await req.json();
 
     if (!authUserId || !type) {
       return NextResponse.json({ error: "authUserId and type are required" }, { status: 400 });
@@ -100,22 +102,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid payment type" }, { status: 400 });
     }
 
+    const isCard = paymentMethod === "card";
+
+    // Build line items
+    const lineItems: any[] = [
+      {
+        price_data: {
+          currency: "usd",
+          unit_amount: Math.round(amount * 100),
+          product_data: {
+            name: productName,
+            description: productDescription,
+          },
+        },
+        quantity: 1,
+      },
+    ];
+
+    // Add convenience fee for card payments
+    if (isCard) {
+      const fee = Math.round(amount * CARD_FEE_PERCENT * 100);
+      lineItems.push({
+        price_data: {
+          currency: "usd",
+          unit_amount: fee,
+          product_data: {
+            name: "Card processing fee (3.5%)",
+            description: "Convenience fee for credit/debit card payment",
+          },
+        },
+        quantity: 1,
+      });
+    }
+
+    metadata.paymentMethod = isCard ? "card" : "bank";
+    metadata.baseAmount = String(amount);
+
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card", "us_bank_account"],
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            unit_amount: Math.round(amount * 100),
-            product_data: {
-              name: productName,
-              description: productDescription,
-            },
-          },
-          quantity: 1,
-        },
-      ],
+      payment_method_types: isCard ? ["card"] : ["us_bank_account"],
+      line_items: lineItems,
       metadata,
       customer_email: tenant.email || undefined,
       success_url: `${baseReturnUrl}/tenant/payments?payment=success&type=${type}`,

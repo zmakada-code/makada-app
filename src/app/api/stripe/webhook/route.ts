@@ -90,25 +90,31 @@ export async function POST(req: NextRequest) {
         // ── Rent payment (original flow) ──
         const { leaseId, period } = meta;
         if (leaseId && period) {
+          // Use baseAmount from metadata (excludes convenience fee) or fall back to session total
+          const recordedAmount = meta.baseAmount
+            ? Number(meta.baseAmount)
+            : session.amount_total ? session.amount_total / 100 : null;
+          const methodNote = meta.paymentMethod === "card" ? "Stripe card payment" : meta.paymentMethod === "bank" ? "Stripe ACH bank payment" : "Stripe payment";
+
           const payment = await prisma.paymentStatus.upsert({
             where: { leaseId_period: { leaseId, period } },
             update: {
               status: "PAID",
               method: "ONLINE",
-              amountPaid: session.amount_total ? session.amount_total / 100 : null,
+              amountPaid: recordedAmount,
               stripeSessionId: session.id,
               paidAt: new Date(),
-              note: `Stripe payment — ${session.payment_intent}`,
+              note: `${methodNote} — ${session.payment_intent}`,
             },
             create: {
               leaseId,
               period,
               status: "PAID",
               method: "ONLINE",
-              amountPaid: session.amount_total ? session.amount_total / 100 : null,
+              amountPaid: recordedAmount,
               stripeSessionId: session.id,
               paidAt: new Date(),
-              note: `Stripe payment — ${session.payment_intent}`,
+              note: `${methodNote} — ${session.payment_intent}`,
             },
           });
           console.log(`✅ Payment recorded: lease ${leaseId}, period ${period}`);
