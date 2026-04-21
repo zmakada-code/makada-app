@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createReceiptDocument } from "@/lib/create-receipt-document";
 import { createSupabaseAdminClient, DOCUMENTS_BUCKET } from "@/lib/supabase/admin";
 import { randomUUID } from "crypto";
+import type { PaymentMethod } from "@prisma/client";
 
 /**
  * POST /api/payments
@@ -85,11 +86,13 @@ export async function POST(req: NextRequest) {
       .filter(Boolean)
       .join(" · ") || null;
 
+    const typedMethod = method as PaymentMethod;
+
     const payment = await prisma.paymentStatus.upsert({
       where: { leaseId_period: { leaseId, period } },
       update: {
         status: "PAID",
-        method,
+        method: typedMethod,
         amountPaid: amountPaid ?? null,
         paidAt: new Date(),
         note: fullNote,
@@ -98,7 +101,7 @@ export async function POST(req: NextRequest) {
         leaseId,
         period,
         status: "PAID",
-        method,
+        method: typedMethod,
         amountPaid: amountPaid ?? null,
         paidAt: new Date(),
         note: fullNote,
