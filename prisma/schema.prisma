@@ -33,9 +33,10 @@ enum PaymentState {
 }
 
 enum PaymentMethod {
-  ONLINE    // Stripe
+  ONLINE       // Stripe
   CHECK
   CASH
+  TURBOTENANT
   OTHER
 }
 
