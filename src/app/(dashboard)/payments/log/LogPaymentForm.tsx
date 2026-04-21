@@ -121,6 +121,7 @@ export function LogPaymentForm({ leases }: { leases: LeaseOption[] }) {
         <select id="method" name="method" required className={inputClass}>
           <option value="CHECK">Check</option>
           <option value="CASH">Cash</option>
+          <option value="TURBOTENANT">TurboTenant</option>
           <option value="OTHER">Other</option>
         </select>
       </div>

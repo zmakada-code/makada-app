@@ -237,7 +237,7 @@ export default async function PaymentsPage({
                   <td className="px-4 py-3 text-center">
                     {p.method ? (
                       <span className="inline-flex items-center gap-1 text-xs text-slate-500 font-medium">
-                        {p.method === "ONLINE" ? "Stripe" : p.method === "CHECK" ? "Check" : p.method === "CASH" ? "Cash" : "Other"}
+                        {p.method === "ONLINE" ? "Stripe" : p.method === "CHECK" ? "Check" : p.method === "CASH" ? "Cash" : p.method === "TURBOTENANT" ? "TurboTenant" : "Other"}
                       </span>
                     ) : (
                       <span className="text-xs text-slate-300">—</span>

@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const validMethods = ["CHECK", "CASH", "ONLINE", "OTHER"];
+    const validMethods = ["CHECK", "CASH", "TURBOTENANT", "ONLINE", "OTHER"];
     if (!validMethods.includes(method)) {
       return NextResponse.json(
         { error: `Invalid method. Must be one of: ${validMethods.join(", ")}` },
