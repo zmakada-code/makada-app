@@ -38,7 +38,7 @@ type SmartLockCode = {
   label: string;
   code: string;
   isActive: boolean;
-  expiresAt: string | null;
+  expiresAt: Date | string | null;
   notes: string | null;
 };
 
@@ -50,7 +50,7 @@ type TempAccessCode = {
   issuedTo: string;
   reason: string | null;
   isActive: boolean;
-  expiresAt: string;
+  expiresAt: Date | string;
 };
 
 type UnitData = {
@@ -72,12 +72,12 @@ type PropertyData = {
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-function isExpired(dt: string | null) {
+function isExpired(dt: Date | string | null) {
   if (!dt) return false;
   return new Date(dt) < new Date();
 }
 
-function formatExpiry(dt: string) {
+function formatExpiry(dt: Date | string) {
   const d = new Date(dt);
   const now = new Date();
   const diffMs = d.getTime() - now.getTime();
