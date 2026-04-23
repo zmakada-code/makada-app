@@ -112,8 +112,10 @@ model Property {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  units    Unit[]
-  expenses Expense[]
+  units          Unit[]
+  expenses       Expense[]
+  lockboxCodes   LockboxCode[]
+  tempAccessCodes TempAccessCode[]
 }
 
 model Unit {
@@ -134,11 +136,13 @@ model Unit {
   zillowUrl         String?  // Zillow rental listing URL for applications
   listingPhotos     String?  // JSON array of Supabase storage paths for listing photos
 
-  property     Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  leases       Lease[]
-  tickets      MaintenanceTicket[]
-  inquiries    Inquiry[]
-  expenses     Expense[]
+  property        Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  leases          Lease[]
+  tickets         MaintenanceTicket[]
+  inquiries       Inquiry[]
+  expenses        Expense[]
+  smartLockCodes  SmartLockCode[]
+  tempAccessCodes TempAccessCode[]
 
   @@index([propertyId])
 }
@@ -304,6 +308,58 @@ model Inquiry {
 
   @@index([unitId])
   @@index([status])
+}
+
+// ---------- Lockbox & Access Codes ----------
+
+model LockboxCode {
+  id          String   @id @default(cuid())
+  propertyId  String
+  label       String   @default("Main lockbox") // "Main lockbox", "Garage lockbox", etc.
+  code        String   // the actual lockbox code
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+model SmartLockCode {
+  id          String    @id @default(cuid())
+  unitId      String
+  label       String    // "Front door", "Back door", etc.
+  code        String
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId])
+}
+
+model TempAccessCode {
+  id          String   @id @default(cuid())
+  propertyId  String
+  unitId      String?  // optional — may be property-wide
+  code        String
+  issuedTo    String   // "Plumber", "Showing - John Smith", etc.
+  reason      String?  // "Maintenance visit", "Property showing", etc.
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unit     Unit?    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([unitId])
+  @@index([expiresAt])
 }
 
 // ---------- Expenses ----------

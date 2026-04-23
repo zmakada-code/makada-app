@@ -18,6 +18,7 @@ import {
   BarChart3,
   Upload,
   FilePlus,
+  KeyRound,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -38,6 +39,7 @@ const PEOPLE_NAV = [
 ];
 
 const MANAGE_NAV = [
+  { href: "/lockbox", label: "Lockbox & Codes", icon: KeyRound },
   { href: "/documents", label: "Documents", icon: FolderOpen },
   { href: "/documents/upload", label: "AI Upload", icon: Upload },
   { href: "/statements", label: "Statements", icon: BarChart3 },
